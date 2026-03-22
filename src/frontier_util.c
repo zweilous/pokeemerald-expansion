@@ -2787,6 +2787,35 @@ bool8 IsFrontierTrainerFemale(u16 trainerId)
         return FALSE;
 }
 
+u16 GetBattlePoints(void)
+{
+    return gSaveBlock2Ptr->frontier.battlePoints;
+}
+
+bool8 IsEnoughBattlePoints(u16 cost)
+{
+    if (GetBattlePoints() >= cost)
+        return TRUE;
+    else
+        return FALSE;
+}
+
+void SetBattlePoints(u16 pointAmount)
+{
+    gSaveBlock2Ptr->frontier.battlePoints = pointAmount;
+}
+
+bool8 RemoveBattlePoints(u16 toSub)
+{
+    u16 ownedBp = GetBattlePoints();
+    if (ownedBp >= toSub)
+    {
+        SetBattlePoints(ownedBp - toSub);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 // Frontier Trainer parties are roughly scaled in difficulty with higher trainer IDs, so scale IVs as well
 // Duplicated in Battle Dome as GetDomeTrainerMonIvs
 u8 GetFrontierTrainerFixedIvs(u16 trainerId)
