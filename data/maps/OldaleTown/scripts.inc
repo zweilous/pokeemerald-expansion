@@ -30,7 +30,10 @@ OldaleTown_EventScript_TownSign::
 	end
 
 OldaleTown_EventScript_Girl::
+	setspeaker SP_NAME_GIRL
+	createfieldmugshot MUGSHOT_TEST, EMOTE_NORMAL
 	msgbox OldaleTown_Text_SavingMyProgress, MSGBOX_NPC
+	removefieldmugshot
 	end
 
 OldaleTown_EventScript_MartEmployee::
