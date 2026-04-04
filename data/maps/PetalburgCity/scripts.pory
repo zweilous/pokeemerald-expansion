@@ -765,14 +765,21 @@ PetalburgCity_EventScript_ExampleQuestNpc::
 	lock
 	faceplayer
 	goto_if_quest_complete QUEST_1, PetalburgCity_EventScript_ExampleQuestDone
-	goto_if_quest_active QUEST_1, PetalburgCity_EventScript_ExampleQuestFinish
+	goto_if_quest_reward QUEST_1, PetalburgCity_EventScript_ExampleQuestReward
+	goto_if_quest_active QUEST_1, PetalburgCity_EventScript_ExampleQuestActive
 	msgbox PetalburgCity_Text_ExampleQuestStart, MSGBOX_DEFAULT
 	startquest QUEST_1
 	release
 	end
 
-PetalburgCity_EventScript_ExampleQuestFinish::
-	msgbox PetalburgCity_Text_ExampleQuestFinish, MSGBOX_DEFAULT
+PetalburgCity_EventScript_ExampleQuestActive::
+	msgbox PetalburgCity_Text_ExampleQuestActive, MSGBOX_DEFAULT
+	questmenu QUEST_MENU_SET_REWARD, QUEST_1
+	release
+	end
+
+PetalburgCity_EventScript_ExampleQuestReward::
+	msgbox PetalburgCity_Text_ExampleQuestReward, MSGBOX_DEFAULT
 	completequest QUEST_1
 	release
 	end
@@ -787,9 +794,14 @@ PetalburgCity_Text_ExampleQuestStart:
 	.string "I've got a job for you.\n"
 	.string "Come talk to me again when you're ready.$"
 
-PetalburgCity_Text_ExampleQuestFinish:
-	.string "You came back!\p"
-	.string "Great work. Here's your reward.$"
+PetalburgCity_Text_ExampleQuestActive:
+	.string "You're back!\p"
+	.string "Looks like you've done the work.\n"
+	.string "Come talk to me once more for your reward.$"
+
+PetalburgCity_Text_ExampleQuestReward:
+	.string "Here's your reward!\p"
+	.string "Great work, traveler.$"
 
 PetalburgCity_Text_ExampleQuestDone:
 	.string "Thanks again for your help!$"

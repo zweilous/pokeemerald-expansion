@@ -1533,58 +1533,82 @@ PetalburgCity_EventScript_ExampleQuestNpc::
 # 767 "data/maps/PetalburgCity/scripts.pory"
 	goto_if_quest_complete QUEST_1, PetalburgCity_EventScript_ExampleQuestDone
 # 768 "data/maps/PetalburgCity/scripts.pory"
-	goto_if_quest_active QUEST_1, PetalburgCity_EventScript_ExampleQuestFinish
+	goto_if_quest_reward QUEST_1, PetalburgCity_EventScript_ExampleQuestReward
 # 769 "data/maps/PetalburgCity/scripts.pory"
-	msgbox PetalburgCity_Text_ExampleQuestStart, MSGBOX_DEFAULT
+	goto_if_quest_active QUEST_1, PetalburgCity_EventScript_ExampleQuestActive
 # 770 "data/maps/PetalburgCity/scripts.pory"
-	startquest QUEST_1
+	msgbox PetalburgCity_Text_ExampleQuestStart, MSGBOX_DEFAULT
 # 771 "data/maps/PetalburgCity/scripts.pory"
-	release
+	startquest QUEST_1
 # 772 "data/maps/PetalburgCity/scripts.pory"
-	end
+	release
 # 773 "data/maps/PetalburgCity/scripts.pory"
-
+	end
 # 774 "data/maps/PetalburgCity/scripts.pory"
-PetalburgCity_EventScript_ExampleQuestFinish::
+
 # 775 "data/maps/PetalburgCity/scripts.pory"
-	msgbox PetalburgCity_Text_ExampleQuestFinish, MSGBOX_DEFAULT
+PetalburgCity_EventScript_ExampleQuestActive::
 # 776 "data/maps/PetalburgCity/scripts.pory"
-	completequest QUEST_1
+	msgbox PetalburgCity_Text_ExampleQuestActive, MSGBOX_DEFAULT
 # 777 "data/maps/PetalburgCity/scripts.pory"
-	release
+	questmenu QUEST_MENU_SET_REWARD, QUEST_1
 # 778 "data/maps/PetalburgCity/scripts.pory"
-	end
-# 779 "data/maps/PetalburgCity/scripts.pory"
-
-# 780 "data/maps/PetalburgCity/scripts.pory"
-PetalburgCity_EventScript_ExampleQuestDone::
-# 781 "data/maps/PetalburgCity/scripts.pory"
-	msgbox PetalburgCity_Text_ExampleQuestDone, MSGBOX_DEFAULT
-# 782 "data/maps/PetalburgCity/scripts.pory"
 	release
-# 783 "data/maps/PetalburgCity/scripts.pory"
+# 779 "data/maps/PetalburgCity/scripts.pory"
 	end
+# 780 "data/maps/PetalburgCity/scripts.pory"
+
+# 781 "data/maps/PetalburgCity/scripts.pory"
+PetalburgCity_EventScript_ExampleQuestReward::
+# 782 "data/maps/PetalburgCity/scripts.pory"
+	msgbox PetalburgCity_Text_ExampleQuestReward, MSGBOX_DEFAULT
+# 783 "data/maps/PetalburgCity/scripts.pory"
+	completequest QUEST_1
 # 784 "data/maps/PetalburgCity/scripts.pory"
-
+	release
 # 785 "data/maps/PetalburgCity/scripts.pory"
-PetalburgCity_Text_ExampleQuestStart:
+	end
 # 786 "data/maps/PetalburgCity/scripts.pory"
-	.string "Hey there, traveler!\p"
+
 # 787 "data/maps/PetalburgCity/scripts.pory"
-	.string "I've got a job for you.\n"
+PetalburgCity_EventScript_ExampleQuestDone::
 # 788 "data/maps/PetalburgCity/scripts.pory"
-	.string "Come talk to me again when you're ready.$"
+	msgbox PetalburgCity_Text_ExampleQuestDone, MSGBOX_DEFAULT
 # 789 "data/maps/PetalburgCity/scripts.pory"
-
+	release
 # 790 "data/maps/PetalburgCity/scripts.pory"
-PetalburgCity_Text_ExampleQuestFinish:
+	end
 # 791 "data/maps/PetalburgCity/scripts.pory"
-	.string "You came back!\p"
-# 792 "data/maps/PetalburgCity/scripts.pory"
-	.string "Great work. Here's your reward.$"
-# 793 "data/maps/PetalburgCity/scripts.pory"
 
+# 792 "data/maps/PetalburgCity/scripts.pory"
+PetalburgCity_Text_ExampleQuestStart:
+# 793 "data/maps/PetalburgCity/scripts.pory"
+	.string "Hey there, traveler!\p"
 # 794 "data/maps/PetalburgCity/scripts.pory"
-PetalburgCity_Text_ExampleQuestDone:
+	.string "I've got a job for you.\n"
 # 795 "data/maps/PetalburgCity/scripts.pory"
+	.string "Come talk to me again when you're ready.$"
+# 796 "data/maps/PetalburgCity/scripts.pory"
+
+# 797 "data/maps/PetalburgCity/scripts.pory"
+PetalburgCity_Text_ExampleQuestActive:
+# 798 "data/maps/PetalburgCity/scripts.pory"
+	.string "You're back!\p"
+# 799 "data/maps/PetalburgCity/scripts.pory"
+	.string "Looks like you've done the work.\n"
+# 800 "data/maps/PetalburgCity/scripts.pory"
+	.string "Come talk to me once more for your reward.$"
+# 801 "data/maps/PetalburgCity/scripts.pory"
+
+# 802 "data/maps/PetalburgCity/scripts.pory"
+PetalburgCity_Text_ExampleQuestReward:
+# 803 "data/maps/PetalburgCity/scripts.pory"
+	.string "Here's your reward!\p"
+# 804 "data/maps/PetalburgCity/scripts.pory"
+	.string "Great work, traveler.$"
+# 805 "data/maps/PetalburgCity/scripts.pory"
+
+# 806 "data/maps/PetalburgCity/scripts.pory"
+PetalburgCity_Text_ExampleQuestDone:
+# 807 "data/maps/PetalburgCity/scripts.pory"
 	.string "Thanks again for your help!$"

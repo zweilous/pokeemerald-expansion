@@ -205,7 +205,7 @@ static void Task_QuestMenuTurnOff1(u8 taskId);
 static void Task_QuestMenuTurnOff2(u8 taskId);
 
 // Quest icon functions
-static void SpawnQuestIconForObject(struct ObjectEvent*,  u32);
+static void SpawnQuestIconForObject(struct ObjectEvent*, u32, u32);
 static void RemoveQuestIconFieldEffect(struct ObjectEvent *objectEvent);
 static void SetQuestIconOnObject(struct ObjectEvent*);
 
@@ -236,7 +236,7 @@ static const u8 sText_ShowLocation[] =
 static const u8 sText_StartForMore[] =
       _("Start for more details.");
 static const u8 sText_ReturnRecieveReward[] =
-      _("Return to {STR_VAR_2}\nto recieve your reward!");
+      _("Return to {STR_VAR_2}\nto receive your reward!");
 static const u8 sText_SubQuestButton[] = _(" {A_BUTTON}");
 static const u8 sText_Type[] = _("{R_BUTTON}Type");
 static const u8 sText_Caught[] = _("Caught");
@@ -2855,7 +2855,7 @@ void HandleQuestIconForSingleObjectEvent(struct ObjectEvent *objectEvent, u32 ob
         return;
 
     // Add icon to NPC
-    SpawnQuestIconForObject(objectEvent, objectEventId);
+    SpawnQuestIconForObject(objectEvent, objectEventId, questId);
 }
 
 static void RemoveQuestIconFieldEffect(struct ObjectEvent *objectEvent)
@@ -2883,8 +2883,16 @@ static void RemoveQuestIconFieldEffect(struct ObjectEvent *objectEvent)
     }
 }
 
-static void SpawnQuestIconForObject(struct ObjectEvent *objectEvent, u32 objectEventId)
+static void SpawnQuestIconForObject(struct ObjectEvent *objectEvent, u32 objectEventId, u32 questId)
 {
+	u8 iconAnim = QUEST_ICON_ANIM_AVAILABLE;
+
+	if (QuestMenu_GetSetQuestState(questId, FLAG_GET_REWARD))
+		iconAnim = QUEST_ICON_ANIM_REWARD;
+	else if (QuestMenu_GetSetQuestState(questId, FLAG_GET_ACTIVE))
+		iconAnim = QUEST_ICON_ANIM_ACTIVE;
+
+	gFieldEffectArguments[3] = iconAnim;
 	SetQuestIconOnObject(objectEvent);
 	StartFieldEffectForObjectEvent(FLDEFF_QUEST_ICON, objectEvent);
 }

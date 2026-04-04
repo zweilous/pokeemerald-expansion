@@ -243,23 +243,36 @@ static const struct SpriteFrameImage sSpriteImageTable_HeartIcon[] =
     }
 };
 
-static const union AnimCmd sSpriteAnim_QuestIcon[] =
+static const union AnimCmd sSpriteAnim_QuestAvailable[] =
 {
-    ANIMCMD_FRAME(0, 30),
-    ANIMCMD_FRAME(1, 25),
-    ANIMCMD_FRAME(0, 30),
+    ANIMCMD_FRAME(0, 60),
+    ANIMCMD_JUMP(0)
+};
+
+static const union AnimCmd sSpriteAnim_QuestActive[] =
+{
+    ANIMCMD_FRAME(1, 60),
+    ANIMCMD_JUMP(0)
+};
+
+static const union AnimCmd sSpriteAnim_QuestReward[] =
+{
+    ANIMCMD_FRAME(2, 60),
     ANIMCMD_JUMP(0)
 };
 
 static const union AnimCmd *const sSpriteAnimTable_QuestIcon[] =
 {
-    sSpriteAnim_QuestIcon
+    [QUEST_ICON_ANIM_AVAILABLE] = sSpriteAnim_QuestAvailable,
+    [QUEST_ICON_ANIM_ACTIVE]    = sSpriteAnim_QuestActive,
+    [QUEST_ICON_ANIM_REWARD]    = sSpriteAnim_QuestReward,
 };
 
 static const struct SpriteFrameImage sSpriteImageTable_QuestIcon[] =
 {
     overworld_frame(sQuest_Gfx, 2, 2, 0),
     overworld_frame(sQuest_Gfx, 2, 2, 1),
+    overworld_frame(sQuest_Gfx, 2, 2, 2),
 };
 
 static const struct SpriteFrameImage sSpriteImageTable_Emotes[] =
@@ -1131,7 +1144,8 @@ u8 FldEff_QuestIcon(void)
         return 0;
 
     sprite = &gSprites[spriteId];
-    SetIconSpriteData(sprite, FLDEFF_QUEST_ICON, 0);
+    SetIconSpriteData(sprite, FLDEFF_QUEST_ICON, gFieldEffectArguments[3]);
+    sprite->data[5] = gFieldEffectArguments[3];
     UpdateSpritePaletteByTemplate(&sSpriteTemplate_Emote, sprite);
     return 0;
 }
@@ -1140,6 +1154,9 @@ void SpriteCB_QuestIcon(struct Sprite *sprite)
 {
     u8 objEventId;
     struct Sprite *objEventSprite;
+    const struct ObjectEventTemplate *objTemplate;
+    u16 questId;
+    u8 targetAnim;
 
     if (TryGetObjectEventIdByLocalIdAndMap(sprite->sLocalId, sprite->sMapNum, sprite->sMapGroup, &objEventId))
     {
@@ -1147,23 +1164,51 @@ void SpriteCB_QuestIcon(struct Sprite *sprite)
         return;
     }
 
-    if (gObjectEvents[objEventId].localId == gSpecialVar_LastTalked)
+    objTemplate = GetObjectEventTemplateByLocalIdAndMap(
+        gObjectEvents[objEventId].localId,
+        gObjectEvents[objEventId].mapNum,
+        gObjectEvents[objEventId].mapGroup);
+
+    if (objTemplate != NULL)
     {
-        u16 questId = GetObjectEventTemplateByLocalIdAndMap(
-            gObjectEvents[objEventId].localId,
-            gObjectEvents[objEventId].mapNum,
-            gObjectEvents[objEventId].mapGroup)->questId;
+        questId = objTemplate->questId;
 
         if (QuestMenu_GetSetQuestState(questId, FLAG_GET_COMPLETED))
         {
             StopQuestFieldEffect(sprite, objEventId);
             return;
         }
+
+        // Update animation based on current quest state
+        if (QuestMenu_GetSetQuestState(questId, FLAG_GET_REWARD))
+            targetAnim = QUEST_ICON_ANIM_REWARD;
+        else if (QuestMenu_GetSetQuestState(questId, FLAG_GET_ACTIVE))
+            targetAnim = QUEST_ICON_ANIM_ACTIVE;
+        else
+            targetAnim = QUEST_ICON_ANIM_AVAILABLE;
+
+        if (sprite->data[5] != targetAnim)
+        {
+            sprite->data[5] = targetAnim;
+            StartSpriteAnim(sprite, targetAnim);
+        }
     }
 
     objEventSprite = &gSprites[gObjectEvents[objEventId].spriteId];
     sprite->x = objEventSprite->x;
     sprite->y = objEventSprite->y - 16;
+
+    // Gentle floating bob with ease-in/ease-out (~0.8s cycle)
+    {
+        static const s8 sBobOffsets[] = {
+             0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  // 10 frames at rest (ease out)
+            -1, -1, -1, -1, -1, -1,                   //  6 frames transitioning
+            -2, -2, -2, -2, -2, -2, -2, -2, -2, -2,  // 10 frames at peak (ease in)
+            -1, -1, -1, -1, -1, -1,                   //  6 frames transitioning
+        };                                             // 32 frames total
+        sprite->data[6] = (sprite->data[6] + 1) & 31;
+        sprite->y2 = sBobOffsets[sprite->data[6]];
+    }
 }
 
 static void StopQuestFieldEffect(struct Sprite *sprite, u32 objEventId)

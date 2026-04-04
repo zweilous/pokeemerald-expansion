@@ -25,6 +25,11 @@
 #define ITEM 2
 #define PKMN 3
 
+// Quest icon animation indices (for NPC bubbles)
+#define QUEST_ICON_ANIM_AVAILABLE  0  // Quest not yet started
+#define QUEST_ICON_ANIM_ACTIVE     1  // Quest in progress
+#define QUEST_ICON_ANIM_REWARD     2  // Ready to turn in
+
 struct SubQuest
 {
     const u8 id;
