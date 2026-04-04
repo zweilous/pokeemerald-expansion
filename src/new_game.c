@@ -234,6 +234,7 @@ void NewGameInitData(void)
     ResetDexNav();
     ClearFollowerNPCData();
     QuestMenu_ResetMenuSaveData();
+    FlagSet(FLAG_SYS_QUEST_MENU_GET);
 }
 
 static void ResetMiniGamesRecords(void)
