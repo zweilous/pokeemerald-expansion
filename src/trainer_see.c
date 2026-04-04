@@ -1142,9 +1142,10 @@ void SpriteCB_QuestIcon(struct Sprite *sprite)
     struct Sprite *objEventSprite;
 
     if (TryGetObjectEventIdByLocalIdAndMap(sprite->sLocalId, sprite->sMapNum, sprite->sMapGroup, &objEventId))
-        StopQuestFieldEffect(sprite, objEventId);
-
-    objEventSprite = &gSprites[gObjectEvents[objEventId].spriteId];
+    {
+        FieldEffectStop(sprite, sprite->sFldEffId);
+        return;
+    }
 
     if (gObjectEvents[objEventId].localId == gSpecialVar_LastTalked)
     {
@@ -1154,9 +1155,13 @@ void SpriteCB_QuestIcon(struct Sprite *sprite)
             gObjectEvents[objEventId].mapGroup)->questId;
 
         if (QuestMenu_GetSetQuestState(questId, FLAG_GET_COMPLETED))
+        {
             StopQuestFieldEffect(sprite, objEventId);
+            return;
+        }
     }
 
+    objEventSprite = &gSprites[gObjectEvents[objEventId].spriteId];
     sprite->x = objEventSprite->x;
     sprite->y = objEventSprite->y - 16;
 }
