@@ -26,10 +26,20 @@
 #define tSound data[4]
 #define tButtonMode data[5]
 #define tWindowFrameType data[6]
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
+#if OPT_FOLLOWERS == TRUE
 #define tFollower data[7]
+#endif
+#if OPT_BATTLE_MODE == TRUE
 #define tBattleMode data[8]
+#endif
+#if OPT_BATTLE_SPEED == TRUE
 #define tBattleSpeed data[9]
+#endif
+#if OPT_AUTORUN == TRUE
 #define tAutorun data[10]
+#endif
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 // Page 1 menu items (standard options)
 enum
@@ -44,16 +54,26 @@ enum
     MENUITEM_COUNT,
 };
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 // Page 2 menu items (extended options)
 enum
 {
+#if OPT_FOLLOWERS == TRUE
     MENUITEM_FOLLOWER,
+#endif
+#if OPT_BATTLE_MODE == TRUE
     MENUITEM_BATTLEMODE,
+#endif
+#if OPT_BATTLE_SPEED == TRUE
     MENUITEM_BATTLESPEED,
+#endif
+#if OPT_AUTORUN == TRUE
     MENUITEM_AUTORUN,
+#endif
     MENUITEM_CANCEL_PG2,
     MENUITEM_COUNT_PG2,
 };
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 enum
 {
@@ -69,19 +89,35 @@ enum
 #define YPOS_BUTTONMODE   (MENUITEM_BUTTONMODE * 16)
 #define YPOS_FRAMETYPE    (MENUITEM_FRAMETYPE * 16)
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 // Y-positions for Page 2 menu items
+#if OPT_FOLLOWERS == TRUE
 #define YPOS_FOLLOWER        (MENUITEM_FOLLOWER * 16)
+#endif
+#if OPT_BATTLE_MODE == TRUE
 #define YPOS_BATTLEMODE      (MENUITEM_BATTLEMODE * 16)
+#endif
+#if OPT_BATTLE_SPEED == TRUE
 #define YPOS_BATTLESPEED     (MENUITEM_BATTLESPEED * 16)
+#endif
+#if OPT_AUTORUN == TRUE
 #define YPOS_AUTORUN         (MENUITEM_AUTORUN * 16)
+#endif
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 // Total number of pages in the options menu (use L/R to navigate)
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 #define PAGE_COUNT  2
+#else
+#define PAGE_COUNT  1
+#endif
 
 static void Task_OptionMenuFadeIn(u8 taskId);
 static void Task_OptionMenuProcessInput(u8 taskId);
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 static void Task_OptionMenuFadeIn_Pg2(u8 taskId);
 static void Task_OptionMenuProcessInput_Pg2(u8 taskId);
+#endif
 static void Task_OptionMenuSave(u8 taskId);
 static void Task_OptionMenuFadeOut(u8 taskId);
 static void HighlightOptionMenuItem(u8 selection);
@@ -91,8 +127,10 @@ static u8 BattleScene_ProcessInput(u8 selection);
 static void BattleScene_DrawChoices(u8 selection);
 static u8 BattleStyle_ProcessInput(u8 selection);
 static void BattleStyle_DrawChoices(u8 selection);
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_FOLLOWERS == TRUE
 static u8 Follower_ProcessInput(u8 selection);
 static void Follower_DrawChoices(u8 selection);
+#endif
 static u8 Sound_ProcessInput(u8 selection);
 static void Sound_DrawChoices(u8 selection);
 static u8 FrameType_ProcessInput(u8 selection);
@@ -100,12 +138,18 @@ static void FrameType_DrawChoices(u8 selection);
 static u8 ButtonMode_ProcessInput(u8 selection);
 static void ButtonMode_DrawChoices(u8 selection);
 static void DrawHeaderText(void);
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_BATTLE_MODE == TRUE
 static u8 BattleMode_ProcessInput(u8 selection);
 static void BattleMode_DrawChoices(u8 selection);
+#endif
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_BATTLE_SPEED == TRUE
 static u8 BattleSpeed_ProcessInput(u8 selection);
 static void BattleSpeed_DrawChoices(u8 selection);
+#endif
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_AUTORUN == TRUE
 static u8 Autorun_ProcessInput(u8 selection);
 static void Autorun_DrawChoices(u8 selection);
+#endif
 static void DrawTextOption(void);
 static void DrawOptionMenuTexts(void);
 static void DrawBgWindowFrames(void);
@@ -129,14 +173,24 @@ static const u8 *const sOptionMenuItemsNames[MENUITEM_COUNT] =
     [MENUITEM_CANCEL]      = COMPOUND_STRING("CANCEL"),
 };
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 static const u8 *const sOptionMenuItemsNames_Pg2[MENUITEM_COUNT_PG2] =
 {
+#if OPT_FOLLOWERS == TRUE
     [MENUITEM_FOLLOWER]        = gText_Follower,
+#endif
+#if OPT_BATTLE_MODE == TRUE
     [MENUITEM_BATTLEMODE]      = gText_BattleMode,
+#endif
+#if OPT_BATTLE_SPEED == TRUE
     [MENUITEM_BATTLESPEED]     = gText_BattleSpeed,
+#endif
+#if OPT_AUTORUN == TRUE
     [MENUITEM_AUTORUN]         = gText_Autorun,
+#endif
     [MENUITEM_CANCEL_PG2]      = gText_OptionMenuCancel,
 };
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 static const struct WindowTemplate sOptionMenuWinTemplates[] =
 {
@@ -209,10 +263,20 @@ static void ReadAllCurrentSettings(u8 taskId)
     gTasks[taskId].tSound = gSaveBlock2Ptr->optionsSound;
     gTasks[taskId].tButtonMode = gSaveBlock2Ptr->optionsButtonMode;
     gTasks[taskId].tWindowFrameType = gSaveBlock2Ptr->optionsWindowFrameType;
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
+#if OPT_FOLLOWERS == TRUE
     gTasks[taskId].tFollower = FlagGet(FLAG_POKEMON_FOLLOWERS);
+#endif
+#if OPT_BATTLE_MODE == TRUE
     gTasks[taskId].tBattleMode = gSaveBlock2Ptr->battleMode;
+#endif
+#if OPT_BATTLE_SPEED == TRUE
     gTasks[taskId].tBattleSpeed = gSaveBlock2Ptr->optionsBattleSpeed;
+#endif
+#if OPT_AUTORUN == TRUE
     gTasks[taskId].tAutorun = !(gSaveBlock2Ptr->optionsAutoRun);  // Inverted for UI display
+#endif
+#endif // OPT_EXTENDED_OPTIONS_MENU
 }
 
 static void DrawOptionsPg1(u8 taskId)
@@ -228,16 +292,26 @@ static void DrawOptionsPg1(u8 taskId)
     CopyWindowToVram(WIN_OPTIONS, COPYWIN_FULL);
 }
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 static void DrawOptionsPg2(u8 taskId)
 {
     ReadAllCurrentSettings(taskId);
+#if OPT_FOLLOWERS == TRUE
     Follower_DrawChoices(gTasks[taskId].tFollower);
+#endif
+#if OPT_BATTLE_MODE == TRUE
     BattleMode_DrawChoices(gTasks[taskId].tBattleMode);
+#endif
+#if OPT_BATTLE_SPEED == TRUE
     BattleSpeed_DrawChoices(gTasks[taskId].tBattleSpeed);
+#endif
+#if OPT_AUTORUN == TRUE
     Autorun_DrawChoices(gTasks[taskId].tAutorun);
+#endif
     HighlightOptionMenuItem(gTasks[taskId].tMenuSelection);
     CopyWindowToVram(WIN_OPTIONS, COPYWIN_FULL);
 }
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 void CB2_InitOptionMenu(void)
 {
@@ -322,10 +396,12 @@ void CB2_InitOptionMenu(void)
             taskId = CreateTask(Task_OptionMenuFadeIn, 0);
             DrawOptionsPg1(taskId);
             break;
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
         case 1:
             taskId = CreateTask(Task_OptionMenuFadeIn_Pg2, 0);
             DrawOptionsPg2(taskId);
-            break;            
+            break;
+#endif
         }
         gMain.state++;
         break;
@@ -338,6 +414,7 @@ void CB2_InitOptionMenu(void)
     }
 }
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 static u8 Process_ChangePage(u8 CurrentPage)
 {
     if (JOY_NEW(R_BUTTON))
@@ -374,6 +451,7 @@ static void Task_ChangePage(u8 taskId)
         break;
     }
 }
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 static void Task_OptionMenuFadeIn(u8 taskId)
 {
@@ -383,6 +461,7 @@ static void Task_OptionMenuFadeIn(u8 taskId)
 
 static void Task_OptionMenuProcessInput(u8 taskId)
 {
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
     if (JOY_NEW(L_BUTTON) || JOY_NEW(R_BUTTON))
     {
         SaveCurrentSettings(taskId);
@@ -391,7 +470,9 @@ static void Task_OptionMenuProcessInput(u8 taskId)
         sCurrPage = Process_ChangePage(sCurrPage);
         gTasks[taskId].func = Task_ChangePage;
     }
-    else if (JOY_NEW(A_BUTTON))
+    else
+#endif
+    if (JOY_NEW(A_BUTTON))
     {
         if (gTasks[taskId].tMenuSelection == MENUITEM_CANCEL)
             gTasks[taskId].func = Task_OptionMenuSave;
@@ -476,6 +557,7 @@ static void Task_OptionMenuProcessInput(u8 taskId)
     }
 }
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
 static void Task_OptionMenuFadeIn_Pg2(u8 taskId)
 {
     if (!gPaletteFade.active)
@@ -523,6 +605,7 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
 
         switch (gTasks[taskId].tMenuSelection)
         {
+#if OPT_FOLLOWERS == TRUE
         case MENUITEM_FOLLOWER:
             previousOption = gTasks[taskId].tFollower;
             gTasks[taskId].tFollower = Follower_ProcessInput(gTasks[taskId].tFollower);
@@ -530,6 +613,8 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
             if (previousOption != gTasks[taskId].tFollower)
                 Follower_DrawChoices(gTasks[taskId].tFollower);
             break;
+#endif
+#if OPT_BATTLE_MODE == TRUE
         case MENUITEM_BATTLEMODE:
             previousOption = gTasks[taskId].tBattleMode;
             gTasks[taskId].tBattleMode = BattleMode_ProcessInput(gTasks[taskId].tBattleMode);
@@ -537,6 +622,8 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
             if (previousOption != gTasks[taskId].tBattleMode)
                 BattleMode_DrawChoices(gTasks[taskId].tBattleMode);
             break;
+#endif
+#if OPT_BATTLE_SPEED == TRUE
         case MENUITEM_BATTLESPEED:
             previousOption = gTasks[taskId].tBattleSpeed;
             gTasks[taskId].tBattleSpeed = BattleSpeed_ProcessInput(gTasks[taskId].tBattleSpeed);
@@ -544,6 +631,8 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
             if (previousOption != gTasks[taskId].tBattleSpeed)
                 BattleSpeed_DrawChoices(gTasks[taskId].tBattleSpeed);
             break;
+#endif
+#if OPT_AUTORUN == TRUE
         case MENUITEM_AUTORUN:
             previousOption = gTasks[taskId].tAutorun;
             gTasks[taskId].tAutorun = Autorun_ProcessInput(gTasks[taskId].tAutorun);
@@ -551,6 +640,7 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
             if (previousOption != gTasks[taskId].tAutorun)
                 Autorun_DrawChoices(gTasks[taskId].tAutorun);
             break;
+#endif
 
         default:
             return;
@@ -563,6 +653,7 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
         }
     }
 }
+#endif // OPT_EXTENDED_OPTIONS_MENU
 
 static void SaveCurrentSettings(u8 taskId)
 {
@@ -572,18 +663,28 @@ static void SaveCurrentSettings(u8 taskId)
     gSaveBlock2Ptr->optionsSound = gTasks[taskId].tSound;
     gSaveBlock2Ptr->optionsButtonMode = gTasks[taskId].tButtonMode;
     gSaveBlock2Ptr->optionsWindowFrameType = gTasks[taskId].tWindowFrameType;
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
+#if OPT_BATTLE_MODE == TRUE
     gSaveBlock2Ptr->battleMode = gTasks[taskId].tBattleMode;
+#endif
+#if OPT_BATTLE_SPEED == TRUE
     gSaveBlock2Ptr->optionsBattleSpeed = gTasks[taskId].tBattleSpeed;
+#endif
+#if OPT_AUTORUN == TRUE
     gSaveBlock2Ptr->optionsAutoRun = !(gTasks[taskId].tAutorun);  // Inverted for storage
-
+#endif
+#if OPT_FOLLOWERS == TRUE
     // Update follower visibility flag
     if (gTasks[taskId].tFollower == 0)
         FlagClear(FLAG_POKEMON_FOLLOWERS);
     else
         FlagSet(FLAG_POKEMON_FOLLOWERS);
-
+#endif
+#if OPT_BATTLE_SPEED == TRUE
     // Update battle speed variable for runtime access
     VarSet(VAR_BATTLE_SPEED, gSaveBlock2Ptr->optionsBattleSpeed);
+#endif
+#endif // OPT_EXTENDED_OPTIONS_MENU
 }
 
 static void Task_OptionMenuSave(u8 taskId)
@@ -719,6 +820,7 @@ static void BattleStyle_DrawChoices(u8 selection)
     DrawOptionMenuChoice(gText_BattleStyleSet, GetStringRightAlignXOffset(FONT_NORMAL, gText_BattleStyleSet, 198), YPOS_BATTLESTYLE, styles[1]);
 }
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_FOLLOWERS == TRUE
 static u8 Follower_ProcessInput(u8 selection)
 {
     if (JOY_NEW(DPAD_LEFT | DPAD_RIGHT))
@@ -739,6 +841,7 @@ static void Follower_DrawChoices(u8 selection)
     DrawOptionMenuChoice(gText_FollowerShow, 104, YPOS_FOLLOWER, styles[0]);
     DrawOptionMenuChoice(gText_FollowerHide, GetStringRightAlignXOffset(FONT_NORMAL, gText_FollowerHide, 198), YPOS_FOLLOWER, styles[1]);
 }
+#endif // OPT_FOLLOWERS
 
 static u8 Sound_ProcessInput(u8 selection)
 {
@@ -868,6 +971,7 @@ static void ButtonMode_DrawChoices(u8 selection)
     DrawOptionMenuChoice(gText_ButtonTypeLEqualsA, GetStringRightAlignXOffset(FONT_NORMAL, gText_ButtonTypeLEqualsA, 198), YPOS_BUTTONMODE, styles[2]);
 }
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_BATTLE_MODE == TRUE
 static u8 BattleMode_ProcessInput(u8 selection)
 {
     if (JOY_NEW(DPAD_RIGHT))
@@ -913,7 +1017,9 @@ static void BattleMode_DrawChoices(u8 selection)
 
     DrawOptionMenuChoice(gText_BattleModeMixed, GetStringRightAlignXOffset(FONT_NORMAL, gText_BattleModeMixed, 198), YPOS_BATTLEMODE, styles[2]);
 }
+#endif // OPT_BATTLE_MODE
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_BATTLE_SPEED == TRUE
 static u8 BattleSpeed_ProcessInput(u8 selection)
 {
     if (JOY_NEW(DPAD_RIGHT))
@@ -946,7 +1052,9 @@ static void BattleSpeed_DrawChoices(u8 selection)
     DrawOptionMenuChoice(gText_BattleSpeed3x, x + 48, YPOS_BATTLESPEED, styles[2]);
     DrawOptionMenuChoice(gText_BattleSpeed4x, x + 72, YPOS_BATTLESPEED, styles[3]);
 }
+#endif // OPT_BATTLE_SPEED
 
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE && OPT_AUTORUN == TRUE
 static u8 Autorun_ProcessInput(u8 selection)
 {
     if (JOY_NEW(DPAD_LEFT | DPAD_RIGHT))
@@ -967,6 +1075,7 @@ static void Autorun_DrawChoices(u8 selection)
         GetStringRightAlignXOffset(FONT_NORMAL, gText_BattleSceneOff, 198),
         YPOS_AUTORUN, styles[1]);
 }
+#endif // OPT_AUTORUN
 
 static void DrawTextOption(void)
 {
@@ -999,10 +1108,12 @@ static void DrawOptionMenuTexts(void)
     const u8* const* menu = NULL;
 
     switch (sCurrPage){
+#if OPT_EXTENDED_OPTIONS_MENU == TRUE
     case 1:
         items = MENUITEM_COUNT_PG2;
         menu = sOptionMenuItemsNames_Pg2;
         break;
+#endif
     default:
     case 0:
         items = MENUITEM_COUNT;
