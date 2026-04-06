@@ -28,6 +28,8 @@
 #define tWindowFrameType data[6]
 #define tFollower data[7]
 #define tBattleMode data[8]
+#define tBattleSpeed data[9]
+#define tAutorun data[10]
 
 // Page 1 menu items (standard options)
 enum
@@ -47,6 +49,8 @@ enum
 {
     MENUITEM_FOLLOWER,
     MENUITEM_BATTLEMODE,
+    MENUITEM_BATTLESPEED,
+    MENUITEM_AUTORUN,
     MENUITEM_CANCEL_PG2,
     MENUITEM_COUNT_PG2,
 };
@@ -68,6 +72,8 @@ enum
 // Y-positions for Page 2 menu items
 #define YPOS_FOLLOWER        (MENUITEM_FOLLOWER * 16)
 #define YPOS_BATTLEMODE      (MENUITEM_BATTLEMODE * 16)
+#define YPOS_BATTLESPEED     (MENUITEM_BATTLESPEED * 16)
+#define YPOS_AUTORUN         (MENUITEM_AUTORUN * 16)
 
 // Total number of pages in the options menu (use L/R to navigate)
 #define PAGE_COUNT  2
@@ -96,6 +102,10 @@ static void ButtonMode_DrawChoices(u8 selection);
 static void DrawHeaderText(void);
 static u8 BattleMode_ProcessInput(u8 selection);
 static void BattleMode_DrawChoices(u8 selection);
+static u8 BattleSpeed_ProcessInput(u8 selection);
+static void BattleSpeed_DrawChoices(u8 selection);
+static u8 Autorun_ProcessInput(u8 selection);
+static void Autorun_DrawChoices(u8 selection);
 static void DrawTextOption(void);
 static void DrawOptionMenuTexts(void);
 static void DrawBgWindowFrames(void);
@@ -103,22 +113,6 @@ static void SaveCurrentSettings(u8 taskId);
 
 EWRAM_DATA static bool8 sArrowPressed = FALSE;
 EWRAM_DATA static u8 sCurrPage = 0;
-
-static const u8 gText_Option[]             = _("OPTION");
-static const u8 gText_TextSpeedSlow[]      = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}SLOW");
-static const u8 gText_TextSpeedMid[]       = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}MID");
-static const u8 gText_TextSpeedFast[]      = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}FAST");
-static const u8 gText_BattleSceneOn[]      = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}ON");
-static const u8 gText_BattleSceneOff[]     = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}OFF");
-static const u8 gText_BattleStyleShift[]   = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}SHIFT");
-static const u8 gText_BattleStyleSet[]     = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}SET");
-static const u8 gText_SoundMono[]          = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}MONO");
-static const u8 gText_SoundStereo[]        = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}STEREO");
-static const u8 gText_FrameType[]          = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}TYPE");
-static const u8 gText_FrameTypeNumber[]    = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}");
-static const u8 gText_ButtonTypeNormal[]   = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}NORMAL");
-static const u8 gText_ButtonTypeLR[]       = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}LR");
-static const u8 gText_ButtonTypeLEqualsA[] = _("{COLOR GREEN}{SHADOW LIGHT_GREEN}L=A");
 
 static const u16 sOptionMenuText_Pal[] = INCBIN_U16("graphics/interface/option_menu_text.gbapal");
 // note: this is only used in the Japanese release
@@ -139,6 +133,8 @@ static const u8 *const sOptionMenuItemsNames_Pg2[MENUITEM_COUNT_PG2] =
 {
     [MENUITEM_FOLLOWER]        = gText_Follower,
     [MENUITEM_BATTLEMODE]      = gText_BattleMode,
+    [MENUITEM_BATTLESPEED]     = gText_BattleSpeed,
+    [MENUITEM_AUTORUN]         = gText_Autorun,
     [MENUITEM_CANCEL_PG2]      = gText_OptionMenuCancel,
 };
 
@@ -215,6 +211,8 @@ static void ReadAllCurrentSettings(u8 taskId)
     gTasks[taskId].tWindowFrameType = gSaveBlock2Ptr->optionsWindowFrameType;
     gTasks[taskId].tFollower = FlagGet(FLAG_POKEMON_FOLLOWERS);
     gTasks[taskId].tBattleMode = gSaveBlock2Ptr->battleMode;
+    gTasks[taskId].tBattleSpeed = gSaveBlock2Ptr->optionsBattleSpeed;
+    gTasks[taskId].tAutorun = !(gSaveBlock2Ptr->optionsAutoRun);  // Inverted for UI display
 }
 
 static void DrawOptionsPg1(u8 taskId)
@@ -235,6 +233,8 @@ static void DrawOptionsPg2(u8 taskId)
     ReadAllCurrentSettings(taskId);
     Follower_DrawChoices(gTasks[taskId].tFollower);
     BattleMode_DrawChoices(gTasks[taskId].tBattleMode);
+    BattleSpeed_DrawChoices(gTasks[taskId].tBattleSpeed);
+    Autorun_DrawChoices(gTasks[taskId].tAutorun);
     HighlightOptionMenuItem(gTasks[taskId].tMenuSelection);
     CopyWindowToVram(WIN_OPTIONS, COPYWIN_FULL);
 }
@@ -537,6 +537,20 @@ static void Task_OptionMenuProcessInput_Pg2(u8 taskId)
             if (previousOption != gTasks[taskId].tBattleMode)
                 BattleMode_DrawChoices(gTasks[taskId].tBattleMode);
             break;
+        case MENUITEM_BATTLESPEED:
+            previousOption = gTasks[taskId].tBattleSpeed;
+            gTasks[taskId].tBattleSpeed = BattleSpeed_ProcessInput(gTasks[taskId].tBattleSpeed);
+
+            if (previousOption != gTasks[taskId].tBattleSpeed)
+                BattleSpeed_DrawChoices(gTasks[taskId].tBattleSpeed);
+            break;
+        case MENUITEM_AUTORUN:
+            previousOption = gTasks[taskId].tAutorun;
+            gTasks[taskId].tAutorun = Autorun_ProcessInput(gTasks[taskId].tAutorun);
+
+            if (previousOption != gTasks[taskId].tAutorun)
+                Autorun_DrawChoices(gTasks[taskId].tAutorun);
+            break;
 
         default:
             return;
@@ -559,11 +573,17 @@ static void SaveCurrentSettings(u8 taskId)
     gSaveBlock2Ptr->optionsButtonMode = gTasks[taskId].tButtonMode;
     gSaveBlock2Ptr->optionsWindowFrameType = gTasks[taskId].tWindowFrameType;
     gSaveBlock2Ptr->battleMode = gTasks[taskId].tBattleMode;
+    gSaveBlock2Ptr->optionsBattleSpeed = gTasks[taskId].tBattleSpeed;
+    gSaveBlock2Ptr->optionsAutoRun = !(gTasks[taskId].tAutorun);  // Inverted for storage
+
     // Update follower visibility flag
     if (gTasks[taskId].tFollower == 0)
         FlagClear(FLAG_POKEMON_FOLLOWERS);
     else
         FlagSet(FLAG_POKEMON_FOLLOWERS);
+
+    // Update battle speed variable for runtime access
+    VarSet(VAR_BATTLE_SPEED, gSaveBlock2Ptr->optionsBattleSpeed);
 }
 
 static void Task_OptionMenuSave(u8 taskId)
@@ -892,6 +912,60 @@ static void BattleMode_DrawChoices(u8 selection)
     DrawOptionMenuChoice(gText_BattleModeDoubles, xMid, YPOS_BATTLEMODE, styles[1]);
 
     DrawOptionMenuChoice(gText_BattleModeMixed, GetStringRightAlignXOffset(FONT_NORMAL, gText_BattleModeMixed, 198), YPOS_BATTLEMODE, styles[2]);
+}
+
+static u8 BattleSpeed_ProcessInput(u8 selection)
+{
+    if (JOY_NEW(DPAD_RIGHT))
+    {
+        if (selection < OPTIONS_BATTLE_SPEED_4X)
+            selection++;
+        else
+            selection = OPTIONS_BATTLE_SPEED_1X;
+        sArrowPressed = TRUE;
+    }
+    else if (JOY_NEW(DPAD_LEFT))
+    {
+        if (selection > OPTIONS_BATTLE_SPEED_1X)
+            selection--;
+        else
+            selection = OPTIONS_BATTLE_SPEED_4X;
+        sArrowPressed = TRUE;
+    }
+    return selection;
+}
+
+static void BattleSpeed_DrawChoices(u8 selection)
+{
+    u8 styles[4] = {0, 0, 0, 0};
+    styles[selection] = 1;
+
+    u8 x = 104;  // Starting X position
+    DrawOptionMenuChoice(gText_BattleSpeed1x, x, YPOS_BATTLESPEED, styles[0]);
+    DrawOptionMenuChoice(gText_BattleSpeed2x, x + 24, YPOS_BATTLESPEED, styles[1]);
+    DrawOptionMenuChoice(gText_BattleSpeed3x, x + 48, YPOS_BATTLESPEED, styles[2]);
+    DrawOptionMenuChoice(gText_BattleSpeed4x, x + 72, YPOS_BATTLESPEED, styles[3]);
+}
+
+static u8 Autorun_ProcessInput(u8 selection)
+{
+    if (JOY_NEW(DPAD_LEFT | DPAD_RIGHT))
+    {
+        selection ^= 1;  // Toggle between 0 and 1
+        sArrowPressed = TRUE;
+    }
+    return selection;
+}
+
+static void Autorun_DrawChoices(u8 selection)
+{
+    u8 styles[2] = {0, 0};
+    styles[selection] = 1;
+
+    DrawOptionMenuChoice(gText_BattleSceneOn, 104, YPOS_AUTORUN, styles[0]);
+    DrawOptionMenuChoice(gText_BattleSceneOff,
+        GetStringRightAlignXOffset(FONT_NORMAL, gText_BattleSceneOff, 198),
+        YPOS_AUTORUN, styles[1]);
 }
 
 static void DrawTextOption(void)

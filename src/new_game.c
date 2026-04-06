@@ -106,6 +106,9 @@ static void SetDefaultOptions(void)
     gSaveBlock2Ptr->optionsBattleSceneOff = FALSE;
     gSaveBlock2Ptr->regionMapZoom = FALSE;
     gSaveBlock2Ptr->battleMode = BATTLE_MODE_MIXED;
+    gSaveBlock2Ptr->optionsBattleSpeed = OPTIONS_BATTLE_SPEED_1X;  // Default to 1x (normal)
+    gSaveBlock2Ptr->optionsAutoRun = FALSE;  // Default to OFF (classic behavior)
+    VarSet(VAR_BATTLE_SPEED, gSaveBlock2Ptr->optionsBattleSpeed);  // Initialize runtime variable
 }
 
 static void ClearPokedexFlags(void)
