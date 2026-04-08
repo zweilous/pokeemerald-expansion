@@ -47,6 +47,7 @@
 #include "link.h"
 #include "frontier_pass.h"
 #include "start_menu.h"
+#include "quests.h"
 
 /*
     Full Screen Start Menu
@@ -1376,6 +1377,17 @@ void Task_OpenBagFromStartMenu(u8 taskId)
     }
 }
 
+void Task_QuestMenu_OpenFromStartMenu(u8 taskId)
+{
+    if (!gPaletteFade.active)
+    {
+        StartMenuFull_FreeResources();
+        PlayRainStoppingSoundEffect();
+        CleanupOverworldWindowsAndTilemaps();
+        QuestMenu_Init(0, CB2_ReturnToFullScreenStartMenu);
+    }
+}
+
 void Task_OpenTrainerCardFromStartMenu(u8 taskId)
 {
     if (!gPaletteFade.active)
@@ -1549,10 +1561,17 @@ static void Task_StartMenuFullMain(u8 taskId)
         }
     }
 
-    if(JOY_NEW(START_BUTTON)) // If start button pressed go to Save Confirmation Control Task
+    if (JOY_NEW(START_BUTTON)) // If start button pressed go to Save Confirmation Control Task
     {
         PrintSaveConfirmToWindow();
         gTasks[taskId].func = Task_HandleSaveConfirmation;
+    }
+    
+    if (JOY_NEW(L_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
+        gTasks[taskId].func = Task_QuestMenu_OpenFromStartMenu;
     }
 
 #if (FLAG_CLOCK_MODE != 0)
