@@ -710,6 +710,7 @@ struct BattleStruct
     u8 dancerSavedAttacker:3;
     u8 dancerSavedTarget:3;
     u8 padding:2;
+    u8 hasBattleInputStarted:1;  // Tracks if player has started choosing moves this battle
 };
 
 struct AiBattleData

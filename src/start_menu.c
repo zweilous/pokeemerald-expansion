@@ -939,7 +939,6 @@ static void Task_SaveFromStartMenuFull(u8 taskId)
     }
 }
 
-
 static bool8 SaveCallback(void)
 {
     switch (RunSaveCallback())

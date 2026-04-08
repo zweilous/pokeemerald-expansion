@@ -474,16 +474,3 @@ Text_MonUsedRockClimb:
 Text_CantRockClimb:
 	.string "The cliff is steep.\n"
 	.string "A Pokémon may be able to climb it.$"
-    
-    
-EventScript_DisableAutoRun::
-    msgbox AutoRunDisabled MSGBOX_SIGN
-    end
-AutoRunDisabled:
-    .string "Auto-run {COLOR RED}disabled{COLOR DARK_GRAY}.$"
-    
-EventScript_EnableAutoRun::
-    msgbox AutoRunEnabled MSGBOX_SIGN
-    end
-AutoRunEnabled:
-    .string "Auto-run {COLOR GREEN}enabled{COLOR DARK_GRAY}.$"

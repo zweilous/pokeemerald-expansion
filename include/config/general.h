@@ -92,4 +92,13 @@
 // Config to toggle using the new shop menu.
 #define MUDSKIP_SHOP_UI
 
+// Extended Options Menu
+// If TRUE, enables a second page in the Options menu (navigated with L/R).
+// Individual options below only appear when this master toggle is TRUE.
+#define OPT_EXTENDED_OPTIONS_MENU    TRUE
+#define OPT_FOLLOWERS                TRUE    // Show/hide follower Pokémon toggle
+#define OPT_BATTLE_MODE              FALSE    // Battle mode (1v1 / 2v2 / Mix) toggle
+#define OPT_BATTLE_SPEED             TRUE    // Battle speed (1x-4x) toggle
+#define OPT_AUTORUN                  TRUE    // Autorun (always sprint) toggle
+
 #endif // GUARD_CONFIG_GENERAL_H

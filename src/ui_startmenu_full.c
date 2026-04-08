@@ -1207,11 +1207,12 @@ static void PrintSaveConfirmToWindow()
 {
     const u8 *str = sText_ConfirmSave;
     u8 sConfirmTextColors[] = {TEXT_COLOR_TRANSPARENT, 2, 3};
-    u8 x = 24;
-    u8 y = 0;
+    // u8 x = 24; // BlitBitmapToWindow(WINDOW_BOTTOM_BAR, sA_ButtonGfx, 12, 5, 8, 8);
+    u8 x = 90;
+    u8 y = 1;
     
     FillWindowPixelBuffer(WINDOW_BOTTOM_BAR, PIXEL_FILL(5));
-    BlitBitmapToWindow(WINDOW_BOTTOM_BAR, sA_ButtonGfx, 12, 5, 8, 8);
+    BlitBitmapToWindow(WINDOW_BOTTOM_BAR, sA_ButtonGfx, 78, 5, 8, 8);
     AddTextPrinterParameterized4(WINDOW_BOTTOM_BAR, 1, x, y, 0, 0, sConfirmTextColors, 0xFF, str);
     PutWindowTilemap(WINDOW_BOTTOM_BAR);
     CopyWindowToVram(WINDOW_BOTTOM_BAR, COPYWIN_FULL);
