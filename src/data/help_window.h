@@ -12,6 +12,15 @@ const struct HelpWindow gHelpWindowInfo[] =
         .headerFont = FONT_NORMAL,
         .descFont = FONT_NORMAL
     },
+    [HELP_RUNNING_SHOES] =
+    {
+        .header = COMPOUND_STRING("Information: Auto-Run"),
+        .desc = COMPOUND_STRING("Auto-run is enabled by default while you\n"
+                                "are moving in the overworld!\n\n"
+                                "Hold {B_BUTTON} during movement to slow down.\n\n"
+                                "Toggle this setting in the Options menu."
+                            ),
+    },
     [HELP_MEGA_EVOLUTION] =
     {
         .header = COMPOUND_STRING("Information: Mega Evolution"),

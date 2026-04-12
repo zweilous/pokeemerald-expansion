@@ -14,6 +14,9 @@ PlayersHouse_1F_EventScript_EnterHouseMovingIn::
 	applymovement LOCALID_PLAYER, PlayersHouse_1F_Movement_PlayerWalkIn
 	applymovement VAR_0x8004, Common_Movement_WalkInPlaceFasterUp
 	waitmovement 0
+	delay 8
+	setflag FLAG_SYS_B_DASH
+	helpwindow HELP_RUNNING_SHOES
 	releaseall
 	end
 
