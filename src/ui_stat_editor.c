@@ -62,9 +62,6 @@ struct StatEditorResources
     u16 ivTotal;
     u16 partyid;
     u16 inputMode;
-    u16 unspentEVs;
-    u16 spentThisSession;
-    u16 totalNum;
     u16 evBanked;
     u16 existingEVs[6];
     u8 currentStat;
@@ -370,9 +367,7 @@ static bool8 StatEditor_DoGfxSetup(void)
         break;
     case 4:
         sStatEditorDataPtr->speciesID = GetMonData(ReturnPartyMon(), MON_DATA_SPECIES);
-        sStatEditorDataPtr->unspentEVs = 0;
         SetExistingEVs();
-        sStatEditorDataPtr->spentThisSession = 0;
         sStatEditorDataPtr->evBanked = 0;
         FreeMonIconPalettes();
         LoadMonIconPalettes();
@@ -517,6 +512,7 @@ static void Task_StatEditorTurnOff(u8 taskId)
 }
 
 static const u8 gText_WantSaveChanges[] = _("Do you want to save these changes?");
+static const u8 gText_AvailableEVs[] = _("Allocate available EVs first.");
 
 #define tState  gTasks[taskId].data[0]
 
@@ -901,10 +897,15 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
     if (JOY_NEW(B_BUTTON))
     {
         gSprites[sStatEditorDataPtr->selectorSpriteId].invisible = TRUE;
-        gTasks[taskId].func = Task_StatEditorConfirmChanges;
-        if (AreStatsUnchanged())
-            tState = 3;
-        return;
+        if (sStatEditorDataPtr->evBanked > 0)
+            return;
+        else 
+        {
+            gTasks[taskId].func = Task_StatEditorConfirmChanges;
+            if (AreStatsUnchanged())
+                tState = 3;
+            return;
+        }
     }
     if (JOY_NEW(DPAD_UP))
     {
@@ -1008,7 +1009,6 @@ static void HandleEditingStatInput(u32 input)
                 if(!(sStatEditorDataPtr->editingStat == STAT_MINIMUM))
                 {
                     sStatEditorDataPtr->editingStat--;
-                    sStatEditorDataPtr->spentThisSession--;
                     sStatEditorDataPtr->evBanked++;
                 }
                 else
@@ -1023,7 +1023,6 @@ static void HandleEditingStatInput(u32 input)
                 if(!(sStatEditorDataPtr->editingStat == STAT_MINIMUM))
                 {
                     sStatEditorDataPtr->editingStat--;
-                    sStatEditorDataPtr->spentThisSession--;
                     sStatEditorDataPtr->evBanked++;
                 }
                 else
@@ -1034,10 +1033,9 @@ static void HandleEditingStatInput(u32 input)
         case EDIT_INPUT_INCREASE_STATE:
             for (iterator = 0; iterator < INCREASE_DECREASE_AMOUNT; iterator++)
             {
-                if(!(CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->spentThisSession == 0))
+                if(!(CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->evBanked == 0))
                 {
                     sStatEditorDataPtr->editingStat++;
-                    sStatEditorDataPtr->spentThisSession++;
                     sStatEditorDataPtr->evBanked--;
                 }
                 else
@@ -1049,10 +1047,9 @@ static void HandleEditingStatInput(u32 input)
         case EDIT_INPUT_BIG_INCREASE_STATE:
             for (iterator = 0; iterator < INCREASE_DECREASE_AMOUNT_BIG; iterator++)
             {
-                if(!(CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->spentThisSession == 0))
+                if(!(CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->evBanked == 0))
                 {
                     sStatEditorDataPtr->editingStat++;
-                    sStatEditorDataPtr->spentThisSession++;
                     sStatEditorDataPtr->evBanked--;
                 }
                 else
@@ -1072,3 +1069,4 @@ static void HandleEditingStatInput(u32 input)
     else
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);       
 }
+// to-do: update selector sprite for DPAD_UP and DPAD_DOWN; unspent EVs error message
