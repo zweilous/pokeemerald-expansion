@@ -26,6 +26,7 @@
 #include "metatile_behavior.h"
 #include "overworld.h"
 #include "pokemon.h"
+#include "tx_registered_items_menu.h"
 #include "safari_zone.h"
 #include "script.h"
 #include "secret_base.h"
@@ -152,10 +153,9 @@ void FieldGetPlayerInput(struct FieldInput *input, u16 newKeys, u16 heldKeys)
 
     if (DEBUG_OVERWORLD_MENU && !DEBUG_OVERWORLD_IN_MENU)
     {
-        if ((heldKeys & DEBUG_OVERWORLD_HELD_KEYS) && input->DEBUG_OVERWORLD_TRIGGER_EVENT)
+        if (input->pressedLButton)
         {
             input->input_field_1_2 = TRUE;
-            input->DEBUG_OVERWORLD_TRIGGER_EVENT = FALSE;
         }
     }
 }
@@ -235,8 +235,19 @@ int ProcessPlayerFieldInput(struct FieldInput *input)
     if (input->tookStep && TryFindHiddenPokemon())
         return TRUE;
 
-    if (input->pressedSelectButton && UseRegisteredKeyItemOnField() == TRUE)
-        return TRUE;
+    if (input->pressedSelectButton)
+    {
+        if (gSaveBlock1Ptr->registeredItemListCount > 0)
+        {
+            if (gSaveBlock1Ptr->registeredItemListCount == 1 && UseRegisteredKeyItemOnField(1) == TRUE)
+                return TRUE;
+            else if (gSaveBlock1Ptr->registeredItemListCount > 1)
+            {
+                TxRegItemsMenu_OpenMenu();
+                return TRUE;
+            }
+        }
+    }
 
     if (input->pressedRButton && TryStartDexNavSearch())
         return TRUE;
