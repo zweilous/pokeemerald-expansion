@@ -89,6 +89,7 @@ static void StatEditor_InitWindows(void);
 static void PrintTitleToWindowMainState();
 static void Task_StatEditorWaitFadeIn(u8 taskId);
 static void Task_StatEditorMain(u8 taskId);
+static void Task_StatEditorAvailableEVs(u8 taskId);
 static void SampleUi_DrawMonIcon(u16 dexNum);
 static void PrintMonStats(void);
 static void SelectorCallback(struct Sprite *sprite);
@@ -97,6 +98,7 @@ static u8 CreateSelector();
 static void DestroySelector();
 static void SetExistingEVs(void);
 static void ResetEVsToStartValues(void);
+static void UpdateSelectorPosition(void);
 static void HandleEditingStatInput(u32 input);
 
 //==========CONST=DATA==========//
@@ -165,6 +167,17 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .baseBlock = 512
     },
     DUMMY_WIN_TEMPLATE
+};
+
+static const struct WindowTemplate sWindowTemplate_AvailableEVs =
+{
+    .bg = 2,
+    .tilemapLeft = 3,
+    .tilemapTop = 1,
+    .width = 24,
+    .height = 2,
+    .paletteNum = 14,
+    .baseBlock = 602
 };
 
 static const struct WindowTemplate sWindowTemplate_ConfirmYesNo =
@@ -383,6 +396,7 @@ static bool8 StatEditor_DoGfxSetup(void)
         PrintTitleToWindowMainState();
         PrintMonStats();
         CreateSelector();
+        UpdateSelectorPosition();
         gMain.state++;
         break;
     case 6:
@@ -516,6 +530,37 @@ static const u8 gText_AvailableEVs[] = _("Allocate available EVs first.");
 
 #define tState  gTasks[taskId].data[0]
 
+static void Task_StatEditorAvailableEVs(u8 taskId)
+{
+    switch (tState)
+    {
+    case 0:
+        gTasks[taskId].data[1] = AddWindow(&sWindowTemplate_AvailableEVs);
+        if (gTasks[taskId].data[1] == WINDOW_NONE)
+        {
+            gTasks[taskId].func = Task_StatEditorMain;
+            break;
+        }
+        DrawStdFrameWithCustomTileAndPalette(gTasks[taskId].data[1], FALSE, 0x250, 13);
+        AddTextPrinterParameterized(gTasks[taskId].data[1], FONT_NORMAL, gText_AvailableEVs, 0, 1, 0, NULL);
+        PutWindowTilemap(gTasks[taskId].data[1]);
+        CopyWindowToVram(gTasks[taskId].data[1], 3);
+        tState++;
+        break;
+    case 1:
+        if (JOY_NEW(A_BUTTON) || JOY_NEW(B_BUTTON))
+        {
+            PlaySE(SE_SELECT);
+            ClearStdWindowAndFrame(gTasks[taskId].data[1], TRUE);
+            RemoveWindow(gTasks[taskId].data[1]);
+            if (sStatEditorDataPtr->selectorSpriteId != 0xFF)
+                gSprites[sStatEditorDataPtr->selectorSpriteId].invisible = FALSE;
+            tState = 0;
+            gTasks[taskId].func = Task_StatEditorMain;
+        }
+        break;
+    }
+}
 static void Task_StatEditorConfirmChanges(u8 taskId)
 {
     switch (tState)
@@ -648,7 +693,7 @@ static const u8 sGenderColors[2][3] =
     {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED, TEXT_COLOR_RED}
 };
 
-static const u8 sText_MenuTitle[] = _("EV Editor");
+static const u8 sText_MenuTitle[] = _("Reallocate EVs");
 static const u8 sText_MenuHP[] = _("HP");
 static const u8 sText_MenuAttack[] = _("Attack");
 static const u8 sText_MenuSpAttack[] = _("Sp. Atk");
@@ -710,11 +755,11 @@ static void PrintTitleToWindowMainState()
     
     AddTextPrinterParameterized4(WINDOW_1, FONT_NORMAL, 1, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuTitle);
 
-    BlitBitmapToWindow(WINDOW_1, sR_ButtonGfx, 75, (BUTTON_Y), 24, 8);
-    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 102, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuLRButtonTextMain);
+    BlitBitmapToWindow(WINDOW_1, sR_ButtonGfx, 94, (BUTTON_Y), 22, 8);
+    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 119, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuLRButtonTextMain);
 
-    BlitBitmapToWindow(WINDOW_1, sB_ButtonGfx, 180, (BUTTON_Y), 8, 8);
-    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 192, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuBButtonTextMain);
+    BlitBitmapToWindow(WINDOW_1, sB_ButtonGfx, 181, (BUTTON_Y), 8, 8);
+    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 193, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuBButtonTextMain);
 
     PutWindowTilemap(WINDOW_1);
     CopyWindowToVram(WINDOW_1, 3);
@@ -738,16 +783,16 @@ static void PrintMonStats()
     sStatEditorDataPtr->evTotal = 0;
     sStatEditorDataPtr->ivTotal = 0;
 
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 18 + 16, 7 + 16, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuStat);
+    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 17 + 16, 7 + 16, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuStat);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, STARTING_X - 6, 7 + 16, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuActual);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, STARTING_X + SECOND_COLUMN + 4, 7 + 16, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuEV);
     
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 24 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 0), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuHP);
+    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 23 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 0), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuHP);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 1), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuAttack);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 2), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuDefense);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 10 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 3), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpAttack);
+    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 10 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 2), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuDefense);
+    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 3), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpAttack);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 4), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpDefense);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 16 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 5), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpeed);
+    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 14 + 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 5), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpeed);
     
     // Print Mon Stats
     for(i = 0; i < 6; i++)
@@ -767,8 +812,10 @@ static void PrintMonStats()
         
         if (currentStat > sStatEditorDataPtr->existingEVs[i])
             color = FONT_GREEN;
-        if (currentStat == MAX_PER_STAT_EVS || currentStat < sStatEditorDataPtr->existingEVs[i])
+        if (currentStat == MAX_PER_STAT_EVS)
             color = FONT_RED;
+        if (currentStat < sStatEditorDataPtr->existingEVs[i])
+            color = FONT_BLUE;
 
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
         AddTextPrinterParameterized4(WINDOW_2, 1, StatPrintData[statsToPrintEVs[i]].x, StatPrintData[statsToPrintEVs[i]].y, 0, 0, sMenuWindowFontColors[color], 0xFF, gStringVar2);
@@ -882,13 +929,13 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
         HandleEditingStatInput(EDIT_INPUT_INCREASE_STATE);
         return;
     }
-    if (JOY_NEW(L_BUTTON))
+    if (JOY_NEW(L_BUTTON) || JOY_REPEAT(L_BUTTON))
     {
         sStatEditorDataPtr->editingStat = GetMonData(ReturnPartyMon(), selectedStatToStatEnum[sStatEditorDataPtr->selectedStat]);
         HandleEditingStatInput(EDIT_INPUT_BIG_DECREASE_STATE);
         return;
     }
-    if (JOY_NEW(R_BUTTON))
+    if (JOY_NEW(R_BUTTON) || JOY_REPEAT(R_BUTTON))
     {
         sStatEditorDataPtr->editingStat = GetMonData(ReturnPartyMon(), selectedStatToStatEnum[sStatEditorDataPtr->selectedStat]);
         HandleEditingStatInput(EDIT_INPUT_BIG_INCREASE_STATE);
@@ -898,7 +945,11 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
     {
         gSprites[sStatEditorDataPtr->selectorSpriteId].invisible = TRUE;
         if (sStatEditorDataPtr->evBanked > 0)
+        {
+            gTasks[taskId].func = Task_StatEditorAvailableEVs;
+            tState = 0;
             return;
+        }
         else 
         {
             gTasks[taskId].func = Task_StatEditorConfirmChanges;
@@ -913,6 +964,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
             sStatEditorDataPtr->selector_y = 5;
         else
             sStatEditorDataPtr->selector_y--;
+        UpdateSelectorPosition();
         return;
     }
     if (JOY_NEW(DPAD_DOWN))
@@ -921,6 +973,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
             sStatEditorDataPtr->selector_y = 0;
         else
             sStatEditorDataPtr->selector_y++;
+        UpdateSelectorPosition();
         return;
     }
 
@@ -965,6 +1018,29 @@ static void ChangeAndUpdateStat()
 #define EDITING_EVS     0
 #define EDITING_IVS     1
 
+#define CHECK_IF_STAT_CANT_INCREASE ((sStatEditorDataPtr->editingStat == EV_MAX_SINGLE_STAT) || (sStatEditorDataPtr->evTotal == EV_MAX_TOTAL))
+/*
+Breakdown of CHECK_IF_STAT_CANT_INCREASE
+TLDR: Stat can't increase if you're either at the maximum per-stat EVs or the Pokémon already has the maximum total EVs.
+*/
+
+static void UpdateSelectorPosition(void)
+{
+    sStatEditorDataPtr->editingStat = GetMonData(ReturnPartyMon(), selectedStatToStatEnum[sStatEditorDataPtr->selector_y]);
+    sStatEditorDataPtr->selector_x = EDITING_EVS;
+
+    if (sStatEditorDataPtr->selectorSpriteId != 0xFF)
+    {
+        if (sStatEditorDataPtr->editingStat == STAT_MINIMUM)
+            StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1);
+        else if (CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->evBanked == 0)
+            StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
+        else
+            StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
+    }
+}
+
+/*
 #define CHECK_IF_STAT_CANT_INCREASE (((sStatEditorDataPtr->editingStat == ((sStatEditorDataPtr->selector_x == EDITING_EVS) ? (EV_MAX_SINGLE_STAT) : (IV_MAX_SINGLE_STAT))) \
                                      || ((sStatEditorDataPtr->selector_x == EDITING_EVS) && (sStatEditorDataPtr->evTotal == EV_MAX_TOTAL))))
 /*
@@ -1030,6 +1106,7 @@ static void HandleEditingStatInput(u32 input)
                     break;
                 }
             }
+            break;
         case EDIT_INPUT_INCREASE_STATE:
             for (iterator = 0; iterator < INCREASE_DECREASE_AMOUNT; iterator++)
             {
@@ -1062,10 +1139,10 @@ static void HandleEditingStatInput(u32 input)
 
     ChangeAndUpdateStat();
 
-    if(CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->evBanked == 0)
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
-    else if(sStatEditorDataPtr->editingStat == STAT_MINIMUM)
+    if(sStatEditorDataPtr->editingStat == STAT_MINIMUM)
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1); 
+    else if(CHECK_IF_STAT_CANT_INCREASE || sStatEditorDataPtr->evBanked == 0)
+        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
     else
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);       
 }
