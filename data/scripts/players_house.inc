@@ -99,10 +99,8 @@ PlayersHouse_2F_EventScript_MomComesUpstairsFemale::
 	return
 
 PlayersHouse_2F_EventScript_CheckWallClock::
-	incrementgamestat GAME_STAT_CHECKED_CLOCK
-	fadescreen FADE_TO_BLACK
-	special Special_ViewWallClock
-	waitstate
+	callnative StartNewPokeballCaseUI
+    waitstate
 	releaseall
 	end
 
