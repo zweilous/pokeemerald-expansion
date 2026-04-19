@@ -246,6 +246,7 @@ void NewGameInitData(void)
     ClearFollowerNPCData();
     QuestMenu_ResetMenuSaveData();
     FlagSet(FLAG_SYS_QUEST_MENU_GET);
+    gSaveBlock3Ptr->followerIndex = OW_FOLLOWER_NOT_SET;
 }
 
 static void ResetMiniGamesRecords(void)
