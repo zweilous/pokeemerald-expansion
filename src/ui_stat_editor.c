@@ -91,6 +91,7 @@ static void Task_StatEditorWaitFadeIn(u8 taskId);
 static void Task_StatEditorMain(u8 taskId);
 static void Task_StatEditorAvailableEVs(u8 taskId);
 static void SampleUi_DrawMonIcon(u16 dexNum);
+static void SpriteCB_StatEditorPokemon(struct Sprite *sprite);
 static void PrintMonStats(void);
 static void SelectorCallback(struct Sprite *sprite);
 static struct Pokemon *ReturnPartyMon();
@@ -512,7 +513,10 @@ static void StatEditor_InitWindows(void)
 static void Task_StatEditorWaitFadeIn(u8 taskId)
 {
     if (!gPaletteFade.active)
+    {
+        PlayCry_Normal(sStatEditorDataPtr->speciesID, 0);
         gTasks[taskId].func = Task_StatEditorMain;
+    }
 }
 
 static void Task_StatEditorTurnOff(u8 taskId)
@@ -541,6 +545,7 @@ static void Task_StatEditorAvailableEVs(u8 taskId)
             gTasks[taskId].func = Task_StatEditorMain;
             break;
         }
+        PlaySE(SE_SELECT);
         DrawStdFrameWithCustomTileAndPalette(gTasks[taskId].data[1], FALSE, 0x250, 13);
         AddTextPrinterParameterized(gTasks[taskId].data[1], FONT_NORMAL, gText_AvailableEVs, 0, 1, 0, NULL);
         PutWindowTilemap(gTasks[taskId].data[1]);
@@ -566,6 +571,7 @@ static void Task_StatEditorConfirmChanges(u8 taskId)
     switch (tState)
     {
     case 0:
+        PlaySE(SE_SELECT);
         DrawStdFrameWithCustomTileAndPalette(WINDOW_4, FALSE, 0x250, 13);
         AddTextPrinterParameterized(WINDOW_4, FONT_NORMAL, gText_WantSaveChanges, 0, 1, 0, NULL);
         PutWindowTilemap(4);
@@ -616,6 +622,20 @@ static void SampleUi_DrawMonIcon(u16 dexNum)
     sStatEditorDataPtr->monIconSpriteId = CreateMonPicSprite_Affine(speciesId, 0, 0x8000, TRUE, MON_ICON_X, MON_ICON_Y, 0, TAG_NONE);
 
     gSprites[sStatEditorDataPtr->monIconSpriteId].oam.priority = 1;
+    gSprites[sStatEditorDataPtr->monIconSpriteId].data[0] = speciesId;
+    gSprites[sStatEditorDataPtr->monIconSpriteId].data[2] = 0;
+    gSprites[sStatEditorDataPtr->monIconSpriteId].callback = SpriteCB_StatEditorPokemon;
+}
+
+static void SpriteCB_StatEditorPokemon(struct Sprite *sprite)
+{
+    bool8 isEgg = GetMonData(ReturnPartyMon(), MON_DATA_IS_EGG);
+
+    if (!gPaletteFade.active && sprite->data[2] != 1)
+    {
+        sprite->data[1] = TRUE;
+        PokemonSummaryDoMonAnimation(sprite, sprite->data[0], isEgg, FALSE);
+    }
 }
 
 static u8 CreateSelector()
@@ -964,6 +984,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
             sStatEditorDataPtr->selector_y = 5;
         else
             sStatEditorDataPtr->selector_y--;
+        PlaySE(SE_SELECT);
         UpdateSelectorPosition();
         return;
     }
@@ -973,6 +994,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
             sStatEditorDataPtr->selector_y = 0;
         else
             sStatEditorDataPtr->selector_y++;
+        PlaySE(SE_SELECT);
         UpdateSelectorPosition();
         return;
     }
