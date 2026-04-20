@@ -902,6 +902,18 @@ static void DestroyStatusSprites()
 // These next few functions are from the Ghoulslash UI Shell, they are the basic functions to init a brand new UI
 void Task_OpenStartMenuFullScreen(u8 taskId)
 {
+    if (gTasks[taskId].data[0] == 0)
+    {
+        // Copy the DNS-tinted gPlttBufferFaded into gPlttBufferUnfaded so that
+        // BeginNormalPaletteFade starts from the current tinted state, not the
+        // original untinted palette that gPlttBufferUnfaded normally holds.
+        CpuCopy16(gPlttBufferFaded, gPlttBufferUnfaded, PLTT_SIZE);
+        BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
+            PlayRainStoppingSoundEffect();
+        gTasks[taskId].data[0] = 1;
+        return;
+    }
+
     if (!gPaletteFade.active)
     {
         CleanupOverworldWindowsAndTilemaps();
