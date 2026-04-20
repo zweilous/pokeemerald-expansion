@@ -2480,12 +2480,12 @@ static void CreateCancelConfirmWindows(bool8 chooseHalf)
         else if (gPartyMenu.layout == PARTY_LAYOUT_SINGLE)
         {
             cancelWindowId = AddWindow(&sCancelButtonWindowTemplate_equal);
-            offset = 3;
+            // offset = 1;
         }
         else
         {
             cancelWindowId = AddWindow(&sCancelButtonWindowTemplate);
-            offset = 3;
+            // offset = 1;
         }
         FillWindowPixelBuffer(cancelWindowId, PIXEL_FILL(0));
 

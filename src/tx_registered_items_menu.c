@@ -95,10 +95,10 @@ static void TxRegItemsMenu_RemoveWindow(void);
 static void TxRegItemsMenu_RemoveScrollIndicator(void);
 static void TxRegItemsMenu_FreeStructs(void);
 
-#define TAG_ITEM_ICON       5110
-#define TAG_INDICATOR_ARROWS       TAG_ITEM_ICON//109
+#define TAG_ITEM_ICON           (5110 | BLEND_IMMUNE_FLAG)
+#define TAG_INDICATOR_ARROWS       (5111 | BLEND_IMMUNE_FLAG)
 #define TILE_TAG_INDICATOR_ARROWS  0x13f8
-#define TAG_SCROLL_ARROW    TAG_ITEM_ICON//5112
+#define TAG_SCROLL_ARROW           (5112 | BLEND_IMMUNE_FLAG)
 
 static const struct WindowTemplate TxRegItemsMenu_WindowTemplates[1] =
 {
@@ -106,7 +106,7 @@ static const struct WindowTemplate TxRegItemsMenu_WindowTemplates[1] =
         .bg = 0,
         .tilemapLeft = 1, //0
         .tilemapTop = 13,
-        .width = 14, //30
+        .width = 18,
         .height = 6, //7
         .paletteNum = 15,
         .baseBlock = 0x0001
@@ -670,6 +670,10 @@ bool8 TxRegItemsMenu_AddRegisteredItem(u16 itemId)
 {
     s8 freeSlot;
     struct RegisteredItemSlot *newItems;
+
+    // Check if item is already registered to prevent duplicates
+    if (TxRegItemsMenu_CheckRegisteredHasItem(itemId))
+        return FALSE;
 
     // Copy PC items
     newItems = AllocZeroed(sizeof(gSaveBlock1Ptr->registeredItems));

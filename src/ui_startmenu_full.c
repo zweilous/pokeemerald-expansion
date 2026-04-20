@@ -909,7 +909,7 @@ void Task_OpenStartMenuFullScreen(u8 taskId)
         // original untinted palette that gPlttBufferUnfaded normally holds.
         CpuCopy16(gPlttBufferFaded, gPlttBufferUnfaded, PLTT_SIZE);
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
-            PlayRainStoppingSoundEffect();
+        PlayRainStoppingSoundEffect();
         gTasks[taskId].data[0] = 1;
         return;
     }
