@@ -107,6 +107,7 @@ static void SpriteCB_Idle(struct Sprite *sprite);
 static void SpriteCB_BattleSpriteSlideLeft(struct Sprite *sprite);
 static void TurnValuesCleanUp(bool8 var0);
 static void SpriteCB_BounceEffect(struct Sprite *sprite);
+static void Task_ClearWaitForCrySlideIn(u8 taskId);
 static void BattleStartClearSetData(void);
 static void DoBattleIntro(void);
 static void TryDoEventsBeforeFirstTurn(void);
@@ -3036,11 +3037,26 @@ void SpriteCB_PlayerMonSlideIn(struct Sprite *sprite)
     }
     else
     {
+        u8 introTaskId;
         sprite->data[3] = 0;
         sprite->x = sprite->data[4];
         sprite->data[4] = 0;
         sprite->callback = SpriteCB_PlayerMonFromBall;
+        // set waitForCry before playing
+        gBattleSpritesDataPtr->healthBoxesData[sprite->sBattler].waitForCry = TRUE;
         PlayCry_ByMode(sprite->sSpeciesId, -25, CRY_MODE_NORMAL);
+        introTaskId = CreateTask(Task_ClearWaitForCrySlideIn, 3);
+        gTasks[introTaskId].data[0] = sprite->sBattler;
+    }
+}
+
+// clears the waitForCry flag for the slide-in path once M4A has confirmed the cry has started (IsCryPlaying returns TRUE)
+static void Task_ClearWaitForCrySlideIn(u8 taskId)
+{
+    if (IsCryPlaying())
+    {
+        gBattleSpritesDataPtr->healthBoxesData[gTasks[taskId].data[0]].waitForCry = FALSE;
+        DestroyTask(taskId);
     }
 }
 

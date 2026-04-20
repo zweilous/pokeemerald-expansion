@@ -109,11 +109,11 @@ static void SetDefaultOptions(void)
     gSaveBlock2Ptr->regionMapZoom = FALSE;
     gSaveBlock2Ptr->battleMode = BATTLE_MODE_MIXED;
 #if OPT_BATTLE_SPEED == TRUE
-    gSaveBlock2Ptr->optionsBattleSpeed = OPTIONS_BATTLE_SPEED_1X;  // Default to 1x (normal)
+    gSaveBlock2Ptr->optionsBattleSpeed = OPTIONS_BATTLE_SPEED_2X;  // Default to 2x
     VarSet(VAR_BATTLE_SPEED, gSaveBlock2Ptr->optionsBattleSpeed);  // Initialize runtime variable
 #endif
 #if OPT_AUTORUN == TRUE
-    gSaveBlock2Ptr->optionsAutoRun = TRUE;  // Default to OFF (classic behavior)
+    gSaveBlock2Ptr->optionsAutoRun = TRUE;  // Default to ON (auto-run enabled)
 #endif
 }
 

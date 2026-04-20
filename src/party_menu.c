@@ -3057,10 +3057,19 @@ static void SetPartyMonSelectionActions(struct Pokemon *mons, u8 slotId, u8 acti
 static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 {
     u8 i, j;
+    u16 totalEvs;
 
     sPartyMenuInternal->numActions = 0;
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_SUMMARY);
-    AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_STAT_EDIT);
+
+    totalEvs = GetMonData(&mons[slotId], MON_DATA_HP_EV)
+             + GetMonData(&mons[slotId], MON_DATA_ATK_EV)
+             + GetMonData(&mons[slotId], MON_DATA_DEF_EV)
+             + GetMonData(&mons[slotId], MON_DATA_SPEED_EV)
+             + GetMonData(&mons[slotId], MON_DATA_SPATK_EV)
+             + GetMonData(&mons[slotId], MON_DATA_SPDEF_EV);
+    if (totalEvs > 0)
+        AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_STAT_EDIT);
 
     if (P_PARTY_MOVE_RELEARNER
      && GetMonData(&mons[slotId], MON_DATA_SPECIES)
