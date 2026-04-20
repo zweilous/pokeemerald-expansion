@@ -863,7 +863,7 @@ struct
 {
     const u8 *text;
     TaskFunc func;
-} static const sCursorOptions[MENU_FIELD_MOVES] =
+} static const sCursorOptions[MENU_FIELD_MOVES + 1] =
 {
     [MENU_SUMMARY]         = {COMPOUND_STRING("SUMMARY"),         CursorCb_Summary},
     [MENU_STAT_EDIT]       = {gText_StatEditor,                   CursorCb_StatEdit},
@@ -891,6 +891,7 @@ struct
     [MENU_TM_MOVES]        = {COMPOUND_STRING("TM MOVES"),        CursorCb_ChangeTMMoves},
     [MENU_TUTOR_MOVES]     = {COMPOUND_STRING("TUTOR MOVES"),     CursorCb_ChangeTutorMoves},
     [MENU_SUB_MOVES]       = {COMPOUND_STRING("LEARN MOVES"),     CursorCb_LearnMovesSubMenu},
+    [MENU_FIELD_MOVES_SUB] = {COMPOUND_STRING("FIELD MOVES"),     CursorCb_FieldMovesSubMenu},
     [MENU_CATALOG_BULB]    = {COMPOUND_STRING("Light bulb"),      CursorCb_CatalogBulb},
     [MENU_CATALOG_OVEN]    = {COMPOUND_STRING("Microwave oven"),  CursorCb_CatalogOven},
     [MENU_CATALOG_WASHING] = {COMPOUND_STRING("Washing machine"), CursorCb_CatalogWashing},
