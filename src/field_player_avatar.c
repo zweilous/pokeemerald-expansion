@@ -921,7 +921,8 @@ static void PlayerNotOnBikeMoving(enum Direction direction, u16 heldKeys)
 
     if (!(gPlayerAvatar.flags & PLAYER_AVATAR_FLAG_UNDERWATER)
 #if OPT_AUTORUN == TRUE
-     && ((heldKeys & B_BUTTON) || gSaveBlock2Ptr->optionsAutoRun)  // B button OR autorun
+        && (((heldKeys & B_BUTTON) && !gSaveBlock2Ptr->optionsAutoRun)
+         || (!(heldKeys & B_BUTTON) && gSaveBlock2Ptr->optionsAutoRun))  // B toggles run/walk when auto-run is enabled
 #else
      && (heldKeys & B_BUTTON)
 #endif
