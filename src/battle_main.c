@@ -3047,16 +3047,21 @@ void SpriteCB_PlayerMonSlideIn(struct Sprite *sprite)
         PlayCry_ByMode(sprite->sSpeciesId, -25, CRY_MODE_NORMAL);
         introTaskId = CreateTask(Task_ClearWaitForCrySlideIn, 3);
         gTasks[introTaskId].data[0] = sprite->sBattler;
+        gTasks[introTaskId].data[1] = BATTLE_CRY_START_TIMEOUT_FRAMES;
     }
 }
 
-// clears the waitForCry flag for the slide-in path once M4A has confirmed the cry has started (IsCryPlaying returns TRUE)
+// keep waitForCry active until cry starts with timeout fallback.
 static void Task_ClearWaitForCrySlideIn(u8 taskId)
 {
-    if (IsCryPlaying())
+    if (IsCryPlaying() || gTasks[taskId].data[1] == 0)
     {
         gBattleSpritesDataPtr->healthBoxesData[gTasks[taskId].data[0]].waitForCry = FALSE;
         DestroyTask(taskId);
+    }
+    else
+    {
+        gTasks[taskId].data[1]--;
     }
 }
 

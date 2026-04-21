@@ -858,6 +858,8 @@ static const u16 sUnusedData[] =
 };
 
 static const u8 sText_Trade4[] = _("TRADE");
+static const u8 sText_Back[] = _("BACK");
+static const u8 sText_Next[] = _("NEXT");
 
 struct
 {
@@ -900,6 +902,8 @@ struct
     [MENU_CATALOG_MOWER]   = {COMPOUND_STRING("Lawn mower"),      CursorCb_CatalogMower},
     [MENU_CHANGE_FORM]     = {COMPOUND_STRING("Change form"),     CursorCb_ChangeForm},
     [MENU_CHANGE_ABILITY]  = {COMPOUND_STRING("Change Ability"),  CursorCb_ChangeAbility},
+    [MENU_FIELD_MOVES_BACK]= {sText_Back,                          CursorCb_FieldMovesBackPage},
+    [MENU_FIELD_MOVES_NEXT]= {sText_Next,                          CursorCb_FieldMovesNextPage},
     [MENU_FOLLOWER]        = {gText_Follower2,                    CursorCb_Follower},
     [MENU_FOLLOWER_SET]    = {gText_FollowerSet,                  CursorCb_FollowerSet},
     [MENU_FOLLOWER_RETURN] = {gText_FollowerReturn,               CursorCb_FollowerReturn},

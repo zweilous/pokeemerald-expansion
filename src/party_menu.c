@@ -123,6 +123,8 @@ enum {
     MENU_CATALOG_MOWER,
     MENU_CHANGE_FORM,
     MENU_CHANGE_ABILITY,
+    MENU_FIELD_MOVES_BACK,
+    MENU_FIELD_MOVES_NEXT,
     MENU_FIELD_MOVES
 };
 
@@ -172,6 +174,8 @@ enum {
 #define MENU_DIR_UP      -1
 #define MENU_DIR_RIGHT    2
 #define MENU_DIR_LEFT    -2
+
+#define FIELD_MOVES_PER_PAGE 6
 
 enum {
     // Window ids 0-5 are implicitly assigned to each party Pokémon in InitPartyMenuBoxes
@@ -507,6 +511,8 @@ static void CursorCb_ChangeTMMoves(u8);
 static void CursorCb_ChangeTutorMoves(u8);
 static void CursorCb_LearnMovesSubMenu(u8);
 static void CursorCb_FieldMovesSubMenu(u8);
+static void CursorCb_FieldMovesBackPage(u8);
+static void CursorCb_FieldMovesNextPage(u8);
 static void CursorCb_CatalogBulb(u8);
 static void CursorCb_CatalogOven(u8);
 static void CursorCb_CatalogWashing(u8);
@@ -3056,7 +3062,7 @@ static void SetPartyMonSelectionActions(struct Pokemon *mons, u8 slotId, u8 acti
 
 static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 {
-    u8 i, j;
+    u8 j;
     u16 totalEvs;
 
     sPartyMenuInternal->numActions = 0;
@@ -3079,18 +3085,12 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
     }
 
     // Add field moves submenu if any field moves are available
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (j = 0; j != FIELD_MOVES_COUNT; j++)
     {
-        for (j = 0; j != FIELD_MOVES_COUNT; j++)
+        if (CanMonUseFieldMove(&mons[slotId], j))
         {
-            if (GetMonData(&mons[slotId], i + MON_DATA_MOVE1) == FieldMove_GetMoveId(j))
-            {
-                // Found at least one field move, add submenu entry
-                AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_FIELD_MOVES_SUB);
-                // Break out of both loops
-                i = MAX_MON_MOVES;
-                break;
-            }
+            AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_FIELD_MOVES_SUB);
+            break;
         }
     }
 
@@ -3130,24 +3130,64 @@ static void SetPartyMonLearnMoveSelectionActions(struct Pokemon *mons, u8 slotId
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_CANCEL1);
 }
 
-static void SetFieldMovesSelectionActions(struct Pokemon *mons, u8 slotId)
+static u8 GetFieldMovePageCount(struct Pokemon *mon)
 {
-    u32 i, j;
-    
-    // Add each available field move to the action list
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    u8 fieldMoveCount = 0;
+    u32 j;
+
+    for (j = 0; j != FIELD_MOVES_COUNT; j++)
     {
-        for (j = 0; j != FIELD_MOVES_COUNT; j++)
-        {
-            if (GetMonData(&mons[slotId], i + MON_DATA_MOVE1) == FieldMove_GetMoveId(j))
-            {
-                AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, j + MENU_FIELD_MOVES);
-                break;
-            }
-        }
+        if (CanMonUseFieldMove(mon, j))
+            fieldMoveCount++;
     }
-    
+
+    return (fieldMoveCount + FIELD_MOVES_PER_PAGE - 1) / FIELD_MOVES_PER_PAGE;
+}
+
+static void SetFieldMovesSelectionActions(struct Pokemon *mons, u8 slotId, u8 page)
+{
+    u8 fieldMoveCount = 0;
+    u8 totalPages = GetFieldMovePageCount(&mons[slotId]);
+    u32 j;
+
+    // Add each available field move to the action list for the current page.
+    for (j = 0; j != FIELD_MOVES_COUNT; j++)
+    {
+        if (!CanMonUseFieldMove(&mons[slotId], j))
+            continue;
+
+        if (fieldMoveCount >= page * FIELD_MOVES_PER_PAGE
+         && fieldMoveCount < (page + 1) * FIELD_MOVES_PER_PAGE)
+        {
+            AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, j + MENU_FIELD_MOVES);
+        }
+
+        fieldMoveCount++;
+    }
+
+    if (page > 0)
+        AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_FIELD_MOVES_BACK);
+
+    if (page + 1 < totalPages)
+        AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_FIELD_MOVES_NEXT);
+
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_CANCEL1);
+}
+
+static void OpenFieldMovesSubMenuPage(u8 taskId, u8 page)
+{
+    PlaySE(SE_SELECT);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[0]);
+    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[1]);
+
+    sPartyMenuInternal->data[0] = page;
+    sPartyMenuInternal->numActions = 0;
+    SetFieldMovesSelectionActions(gPlayerParty, gPartyMenu.slotId, page);
+
+    DisplaySelectionWindow(SELECTWINDOW_ACTIONS);
+    DisplayPartyMenuStdMessage(PARTY_MSG_DO_WHAT_WITH_MON);
+    gTasks[taskId].data[0] = 0xFF;
+    gTasks[taskId].func = Task_HandleSelectionMenuInput;
 }
 
 static u8 GetPartyMenuActionsType(struct Pokemon *mon)
@@ -8519,18 +8559,17 @@ static void CursorCb_LearnMovesSubMenu(u8 taskId)
 
 static void CursorCb_FieldMovesSubMenu(u8 taskId)
 {
-    PlaySE(SE_SELECT);
-    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[0]);
-    PartyMenuRemoveWindow(&sPartyMenuInternal->windowId[1]);
-    
-    // Clear actions and rebuild with field moves only
-    sPartyMenuInternal->numActions = 0;
-    SetFieldMovesSelectionActions(gPlayerParty, gPartyMenu.slotId);
-    
-    DisplaySelectionWindow(SELECTWINDOW_ACTIONS);
-    DisplayPartyMenuStdMessage(PARTY_MSG_DO_WHAT_WITH_MON);
-    gTasks[taskId].data[0] = 0xFF;
-    gTasks[taskId].func = Task_HandleSelectionMenuInput;
+    OpenFieldMovesSubMenuPage(taskId, 0);
+}
+
+static void CursorCb_FieldMovesBackPage(u8 taskId)
+{
+    OpenFieldMovesSubMenuPage(taskId, sPartyMenuInternal->data[0] - 1);
+}
+
+static void CursorCb_FieldMovesNextPage(u8 taskId)
+{
+    OpenFieldMovesSubMenuPage(taskId, sPartyMenuInternal->data[0] + 1);
 }
 
 void CursorCb_MoveItemCallback(u8 taskId)

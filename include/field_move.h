@@ -13,6 +13,7 @@ struct FieldMoveInfo
 };
 
 extern const struct FieldMoveInfo gFieldMoveInfo[];
+bool32 CanMonUseFieldMove(struct Pokemon *mon, enum FieldMove fieldMove);
 
 static inline bool32 SetUpFieldMove(enum FieldMove fieldMove)
 {

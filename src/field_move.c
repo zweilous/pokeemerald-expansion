@@ -3,7 +3,9 @@
 #include "field_move.h"
 #include "fldeff.h"
 #include "fldeff_misc.h"
+#include "item.h"
 #include "party_menu.h"
+#include "pokemon.h"
 #include "constants/field_move.h"
 #include "constants/moves.h"
 #include "constants/party_menu.h"
@@ -239,3 +241,23 @@ const struct FieldMoveInfo gFieldMoveInfo[FIELD_MOVES_COUNT] =
     },
 #endif
 };
+
+bool32 CanMonUseFieldMove(struct Pokemon *mon, enum FieldMove fieldMove)
+{
+    enum Move move = FieldMove_GetMoveId(fieldMove);
+    enum Item tmHmItem;
+    u16 species;
+
+    if (MonKnowsMove(mon, move))
+        return TRUE;
+
+    tmHmItem = GetTMHMItemIdFromMoveId(move);
+    if (tmHmItem == ITEM_NONE)
+        return FALSE;
+
+    species = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
+    if (!CanLearnTeachableMove(species, move))
+        return FALSE;
+
+    return CheckBagHasItem(tmHmItem, 1);
+}

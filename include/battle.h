@@ -58,6 +58,9 @@
 
 #define BATTLE_BUFFER_LINK_SIZE 0x1000
 
+// Frames to wait for M4A to report cry playback before releasing intro cry gates.
+#define BATTLE_CRY_START_TIMEOUT_FRAMES 60
+
 // Fully Cleared each turn after end turn effects are done. A few things are cleared before end turn effects
 struct ProtectStruct
 {

@@ -750,8 +750,19 @@ static void Task_PlayCryWhenReleasedFromBall(u8 taskId)
             PlayCry_ByMode(species, pan, CRY_MODE_NORMAL);
         else
             PlayCry_ByMode(species, pan, CRY_MODE_WEAK);
-        gBattleSpritesDataPtr->healthBoxesData[battler].waitForCry = FALSE;
-        DestroyTask(taskId);
+        gTasks[taskId].tCryTaskFrames = BATTLE_CRY_START_TIMEOUT_FRAMES;
+        gTasks[taskId].tCryTaskState = 11;
+        break;
+    case 11:
+        if (IsCryPlaying() || gTasks[taskId].tCryTaskFrames == 0)
+        {
+            gBattleSpritesDataPtr->healthBoxesData[battler].waitForCry = FALSE;
+            DestroyTask(taskId);
+        }
+        else
+        {
+            gTasks[taskId].tCryTaskFrames--;
+        }
         break;
     case 2:
         StopCryAndClearCrySongs();
@@ -766,7 +777,17 @@ static void Task_PlayCryWhenReleasedFromBall(u8 taskId)
                 PlayCry_ReleaseDouble(species, pan, CRY_MODE_DOUBLES);
             else
                 PlayCry_ReleaseDouble(species, pan, CRY_MODE_WEAK_DOUBLES);
-
+            gTasks[taskId].tCryTaskFrames = BATTLE_CRY_START_TIMEOUT_FRAMES;
+            gTasks[taskId].tCryTaskState = 21;
+        }
+        else
+        {
+            gTasks[taskId].tCryTaskFrames--;
+        }
+        break;
+    case 21:
+        if (IsCryPlaying() || gTasks[taskId].tCryTaskFrames == 0)
+        {
             gBattleSpritesDataPtr->healthBoxesData[battler].waitForCry = FALSE;
             DestroyTask(taskId);
         }
@@ -806,9 +827,19 @@ static void Task_PlayCryWhenReleasedFromBall(u8 taskId)
             PlayCry_ReleaseDouble(species, pan, CRY_MODE_NORMAL);
         else
             PlayCry_ReleaseDouble(species, pan, CRY_MODE_WEAK);
-
-        gBattleSpritesDataPtr->healthBoxesData[battler].waitForCry = FALSE;
-        DestroyTask(taskId);
+        gTasks[taskId].tCryTaskFrames = BATTLE_CRY_START_TIMEOUT_FRAMES;
+        gTasks[taskId].tCryTaskState = 33;
+        break;
+    case 33:
+        if (IsCryPlaying() || gTasks[taskId].tCryTaskFrames == 0)
+        {
+            gBattleSpritesDataPtr->healthBoxesData[battler].waitForCry = FALSE;
+            DestroyTask(taskId);
+        }
+        else
+        {
+            gTasks[taskId].tCryTaskFrames--;
+        }
         break;
     }
 }
