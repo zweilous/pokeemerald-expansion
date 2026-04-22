@@ -2105,12 +2105,14 @@ static bool8 DecompressGraphics(void)
         sMonSummaryScreen->switchCounter++;
         break;
     case 18:
-        if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
+        if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED
+         || BW_SUMMARY_IV_EV_DISPLAY == BW_IV_GRADED_ONLY)
             LoadCompressedSpriteSheet(&sSpriteSheet_StatGrades);
         sMonSummaryScreen->switchCounter++;
         break;
     case 19:
-        if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
+        if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED
+         || BW_SUMMARY_IV_EV_DISPLAY == BW_IV_GRADED_ONLY)
             LoadSpritePalette(&sSpritePal_StatGrades);
         sMonSummaryScreen->switchCounter++;
         break;
@@ -2376,7 +2378,8 @@ static void ChangeSummaryState(s16 *data, u8 taskId)
         tSkillsState = SKILL_STATE_EVS;
         break;
     case SKILL_STATE_EVS:
-        if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
+        if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED
+         || BW_SUMMARY_IV_EV_DISPLAY == BW_IV_GRADED_ONLY)
             tSkillsState = SKILL_STATE_IVS;
         else
             tSkillsState = SKILL_STATE_STATS;
@@ -2405,7 +2408,7 @@ static void DrawNextSkillsButtonPrompt(u8 mode)
                 ClearWindowTilemap(PSS_LABEL_WINDOW_PROMPT_EVS);
                 PutWindowTilemap(PSS_LABEL_WINDOW_PROMPT_IVS);
             }
-            else
+            else if (BW_SUMMARY_IV_EV_DISPLAY != BW_IV_GRADED_ONLY)
             {
                 ClearWindowTilemap(PSS_LABEL_WINDOW_PROMPT_EVS);
                 PutWindowTilemap(PSS_LABEL_WINDOW_PROMPT_STATS);
@@ -2418,7 +2421,7 @@ static void DrawNextSkillsButtonPrompt(u8 mode)
 static void Task_HandleInput(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
-    u8 defaultSkillsState = (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED) ? SKILL_STATE_IVS : SKILL_STATE_STATS;
+    u8 defaultSkillsState = (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED || BW_SUMMARY_IV_EV_DISPLAY == BW_IV_GRADED_ONLY) ? SKILL_STATE_IVS : SKILL_STATE_STATS;
 
     if (MenuHelpers_ShouldWaitForLinkRecv() != TRUE && !gPaletteFade.active)
     {
@@ -2466,7 +2469,8 @@ static void Task_HandleInput(u8 taskId)
             }
             else
             {
-                if (BW_SUMMARY_IV_EV_DISPLAY != BW_IV_EV_HIDDEN)
+                if (BW_SUMMARY_IV_EV_DISPLAY != BW_IV_EV_HIDDEN
+                 && BW_SUMMARY_IV_EV_DISPLAY != BW_IV_GRADED_ONLY)
                 {
                     // Cycle through IVs/EVs/stats on pressing A
                     ChangeSummaryState(data, taskId);
@@ -2673,10 +2677,12 @@ static void Task_ChangeSummaryMon(u8 taskId)
                 DrawNextSkillsButtonPrompt(SKILL_STATE_STATS);
             else if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
                 DrawNextSkillsButtonPrompt(SKILL_STATE_IVS);
+            // BW_IV_GRADED_ONLY: no button prompt drawn
         }
         break;
     case 12:
-        if (sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS && BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
+        if (sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS
+         && (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED || BW_SUMMARY_IV_EV_DISPLAY == BW_IV_GRADED_ONLY))
             ShowGradeIcons(SKILL_STATE_IVS);
         break;
     case 13:
@@ -2842,7 +2848,8 @@ static void PssScrollEnd(u8 taskId)
     TryDrawHPBar();
     TryDrawExperienceProgressBar();
 
-    if (sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS && BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
+    if (sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS
+    && (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED || BW_SUMMARY_IV_EV_DISPLAY == BW_IV_GRADED_ONLY))
         ShowGradeIcons(SKILL_STATE_IVS);
 
     if (sMonSummaryScreen->currPageIndex == PSS_PAGE_INFO)
@@ -3753,6 +3760,7 @@ static void PutPageWindowTilemaps(u8 page)
             PutWindowTilemap(PSS_LABEL_WINDOW_PROMPT_IVS);
         else if (BW_SUMMARY_IV_EV_DISPLAY == BW_IV_EV_GRADED)
             PutWindowTilemap(PSS_LABEL_WINDOW_PROMPT_EVS);
+        // BW_IV_GRADED_ONLY: no toggle button shown
         break;
     case PSS_PAGE_BATTLE_MOVES:
         PutWindowTilemap(PSS_LABEL_WINDOW_BATTLE_MOVES_TITLE);
