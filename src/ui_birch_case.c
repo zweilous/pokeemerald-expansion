@@ -76,6 +76,7 @@ enum TextIds
     CHOOSE_MON,
     CONFIRM_SELECTION,
     RECIEVED_MON,
+    CONFIRM_CANCEL,
 };
 
 enum Colors
@@ -162,6 +163,7 @@ static void BirchCase_InitWindows(void);
 static void PrintTextToBottomBar(u8 textId);
 static void Task_BirchCaseWaitFadeIn(u8 taskId);
 static void Task_BirchCaseMain(u8 taskId);
+static void Task_BirchCaseConfirmCancel(u8 taskId);
 static void SampleUi_DrawMonIcon(u16 speciesId);
 static void Task_DelayedSpriteLoad(u8 taskId);
 
@@ -771,6 +773,7 @@ static void BirchCase_InitWindows(void)
 static const u8 sText_ChooseMon[] = _("Choose a Pokémon!");
 static const u8 sText_AreYouSure[] = _("Are you sure?    {A_BUTTON} Yes  {B_BUTTON} No");
 static const u8 sText_RecievedMon[] = _("Give your Pokémon a nickname?   {A_BUTTON} Yes  {B_BUTTON} No");
+static const u8 sText_ExitMenu[] = _("Exit menu?    {A_BUTTON} Yes  {B_BUTTON} No");
 static void PrintTextToBottomBar(u8 textId)
 {
     u8 speciesNameArray[16];
@@ -795,6 +798,9 @@ static void PrintTextToBottomBar(u8 textId)
             break;
         case 2:
             mainBarAlternatingText = sText_RecievedMon;
+            break;
+        case 3:
+            mainBarAlternatingText = sText_ExitMenu;
             break;
         default:
             mainBarAlternatingText = sText_ChooseMon;
@@ -900,6 +906,24 @@ static void Task_BirchCaseConfirmSelection(u8 taskId)
         PrintTextToBottomBar(RECIEVED_MON);
         BirchCase_GiveMon();
         gTasks[taskId].func = Task_BirchCaseRecievedMon;
+        return;
+    }
+    if (JOY_NEW(B_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        PrintTextToBottomBar(CHOOSE_MON);
+        gTasks[taskId].func = Task_BirchCaseMain;
+        return;
+    }
+}
+
+static void Task_BirchCaseConfirmCancel(u8 taskId)
+{
+    if (JOY_NEW(A_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        BeginNormalPaletteFade(0xFFFFFFFF, 0, 0, 16, RGB_BLACK);
+        gTasks[taskId].func = Task_BirchCaseTurnOff;
         return;
     }
     if (JOY_NEW(B_BUTTON))
@@ -1039,6 +1063,14 @@ static void Task_BirchCaseMain(u8 taskId)
             PlaySE(SE_BOO);
             return;
         }
+    }
+
+    if (JOY_NEW(B_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        PrintTextToBottomBar(CONFIRM_CANCEL);
+        gTasks[taskId].func = Task_BirchCaseConfirmCancel;
+        return;
     }
 }
 
