@@ -24,6 +24,7 @@ struct PartyMenu
 
 extern struct PartyMenu gPartyMenu;
 extern bool8 gPartyMenuUseExitCallback;
+extern bool8 gPartyMenuSwapBallMode;
 extern u8 gSelectedMonPartyId;
 extern MainCallback gPostMenuFieldCallback;
 extern u8 gSelectedOrderFromParty[MAX_FRONTIER_PARTY_SIZE];

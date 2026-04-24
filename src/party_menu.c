@@ -96,6 +96,7 @@ enum {
     MENU_GIVE,
     MENU_TAKE_ITEM,
     MENU_MOVE_ITEM,
+    MENU_POKEBALL,
     MENU_MAIL,
     MENU_TAKE_MAIL,
     MENU_READ,
@@ -230,6 +231,7 @@ static EWRAM_DATA struct PartyMenuBox *sPartyMenuBoxes = NULL;
 static EWRAM_DATA u8 *sPartyBgGfxTilemap = NULL;
 static EWRAM_DATA u8 *sPartyBgTilemapBuffer = NULL;
 EWRAM_DATA bool8 gPartyMenuUseExitCallback = 0;
+EWRAM_DATA bool8 gPartyMenuSwapBallMode = FALSE;
 EWRAM_DATA u8 gSelectedMonPartyId = 0;
 EWRAM_DATA MainCallback gPostMenuFieldCallback = NULL;
 static EWRAM_DATA u16 *sSlot1TilemapBuffer = 0; // for switching party slots
@@ -370,9 +372,12 @@ static void SwitchPartyMon(void);
 static void Task_SlideSelectedSlotsOnscreen(u8);
 static void CB2_SelectBagItemToGive(void);
 static void CB2_GiveHoldItem(void);
+static void CB2_SelectBagPokeballToReplace(void);
+static void CB2_ReplacePokeball(void);
 static void CB2_WriteMailToGiveMon(void);
 static void Task_SwitchHoldItemsPrompt(u8);
 static void Task_GiveHoldItem(u8);
+static void Task_ReplacePokeball(u8);
 static void Task_SwitchItemsYesNo(u8);
 static void Task_HandleSwitchItemsYesNoInput(u8);
 static void Task_WriteMailToGiveMonAfterText(u8);
@@ -492,6 +497,7 @@ static void CursorCb_Item(u8);
 static void CursorCb_Give(u8);
 static void CursorCb_TakeItem(u8);
 static void CursorCb_MoveItem(u8);
+static void CursorCb_Pokeball(u8);
 static void CursorCb_Mail(u8);
 static void CursorCb_Read(u8);
 static void CursorCb_TakeMail(u8);
@@ -547,6 +553,7 @@ static const u8 sText_doneText[] = _("{STR_VAR_1}'s ability became\n{STR_VAR_2}!
 static const u8 sText_BasePointsResetToZero[] = _("{STR_VAR_1}'s base points\nwere all reset to zero!{PAUSE_UNTIL_PRESS}");
 static const u8 sText_CannotSendMonToBoxHM[] = _("Cannot send that mon to the box,\nbecause it knows a HM move.{PAUSE_UNTIL_PRESS}");
 static const u8 sText_CannotSendMonToBoxPartner[] = _("Cannot send a mon that doesn't\nbelong to you to the box.{PAUSE_UNTIL_PRESS}");
+static const u8 sText_PkmnBallWasChanged[] = _("{STR_VAR_1}'s {STR_VAR_2} was swapped\nwith the {STR_VAR_3}!{PAUSE_UNTIL_PRESS}");
 
 // static const data
 #include "data/party_menu.h"
@@ -3016,9 +3023,12 @@ static u8 DisplaySelectionWindow(u8 windowType)
 
 static void PrintMessage(const u8 *text)
 {
+    FillWindowPixelBuffer(WIN_MSG, PIXEL_FILL(1));
     DrawStdFrameWithCustomTileAndPalette(WIN_MSG, FALSE, 0x4F, 13);
     gTextFlags.canABSpeedUpPrint = TRUE;
     AddTextPrinterParameterized2(WIN_MSG, FONT_NORMAL, text, GetPlayerTextSpeedDelay(), 0, TEXT_COLOR_DARK_GRAY, TEXT_COLOR_WHITE, TEXT_COLOR_LIGHT_GRAY);
+    PutWindowTilemap(WIN_MSG);
+    ScheduleBgCopyTilemapToVram(2);
 }
 
 static void PartyMenuDisplayYesNoMenu(void)
@@ -3785,6 +3795,7 @@ static void CursorCb_Item(u8 taskId)
 static void CursorCb_Give(u8 taskId)
 {
     PlaySE(SE_SELECT);
+    gPartyMenuSwapBallMode = FALSE;
     sPartyMenuInternal->exitCallback = CB2_SelectBagItemToGive;
     Task_ClosePartyMenu(taskId);
 }
@@ -3795,6 +3806,74 @@ static void CB2_SelectBagItemToGive(void)
         GoToBagMenu(ITEMMENULOCATION_PARTY, POCKETS_COUNT, CB2_GiveHoldItem);
     else
         GoToBattlePyramidBagMenu(PYRAMIDBAG_LOC_PARTY, CB2_GiveHoldItem);
+}
+
+static void CursorCb_Pokeball(u8 taskId)
+{
+    PlaySE(SE_SELECT);
+    gPartyMenuSwapBallMode = TRUE;
+    sPartyMenuInternal->exitCallback = CB2_SelectBagPokeballToReplace;
+    Task_ClosePartyMenu(taskId);
+}
+
+static void CB2_SelectBagPokeballToReplace(void)
+{
+    if (CurrentBattlePyramidLocation() == PYRAMID_LOCATION_NONE)
+        GoToBagMenu(ITEMMENULOCATION_PARTY, POCKET_POKE_BALLS, CB2_ReplacePokeball);
+    else
+        GoToBattlePyramidBagMenu(PYRAMIDBAG_LOC_PARTY, CB2_ReplacePokeball);
+}
+
+static void CB2_ReplacePokeball(void)
+{
+    if (gSpecialVar_ItemId == ITEM_NONE)
+    {
+        gPartyMenuSwapBallMode = FALSE;
+        InitPartyMenu(gPartyMenu.menuType, KEEP_PARTY_LAYOUT, gPartyMenu.action, TRUE, PARTY_MSG_NONE, Task_TryCreateSelectionWindow, gPartyMenu.exitCallback);
+    }
+    else
+    {
+        InitPartyMenu(gPartyMenu.menuType, KEEP_PARTY_LAYOUT, gPartyMenu.action, TRUE, PARTY_MSG_NONE, Task_ReplacePokeball, gPartyMenu.exitCallback);
+    }
+}
+
+static void Task_ReplacePokeball(u8 taskId)
+{
+    struct Pokemon *mon;
+    enum Item newBallItem;
+    enum PokeBall oldBall;
+    enum Item oldBallItem;
+    enum PokeBall newBall;
+
+    if (gPaletteFade.active)
+        return;
+
+    mon = &gPlayerParty[gPartyMenu.slotId];
+    newBallItem = gSpecialVar_ItemId;
+    oldBall = GetMonData(mon, MON_DATA_POKEBALL);
+    if (oldBall >= POKEBALL_COUNT)
+        oldBall = BALL_POKE;
+    oldBallItem = gPokeBalls[oldBall].itemId;
+    newBall = ItemIdToBallId(newBallItem);
+
+    RemoveBagItem(newBallItem, 1);
+    if (oldBallItem != ITEM_NONE && AddBagItem(oldBallItem, 1) == FALSE)
+    {
+        AddBagItem(newBallItem, 1);
+        BufferBagFullCantTakeItemMessage(oldBallItem);
+        DisplayPartyMenuMessage(gStringVar4, TRUE);
+        gTasks[taskId].func = Task_ReturnToChooseMonAfterText;
+        return;
+    }
+
+    SetMonData(mon, MON_DATA_POKEBALL, &newBall);
+    gPartyMenuSwapBallMode = FALSE;
+    GetMonNickname(mon, gStringVar1);
+    CopyItemName(oldBallItem, gStringVar2);
+    CopyItemName(newBallItem, gStringVar3);
+    StringExpandPlaceholders(gStringVar4, sText_PkmnBallWasChanged);
+    DisplayPartyMenuMessage(gStringVar4, TRUE);
+    gTasks[taskId].func = Task_ReturnToChooseMonAfterText;
 }
 
 static void CB2_GiveHoldItem(void)

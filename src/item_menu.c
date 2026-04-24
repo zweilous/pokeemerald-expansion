@@ -32,6 +32,7 @@
 #include "overworld.h"
 #include "palette.h"
 #include "party_menu.h"
+#include "pokeball.h"
 #include "player_pc.h"
 #include "pokemon.h"
 #include "pokemon_summary_screen.h"
@@ -92,6 +93,7 @@ enum {
     ACTION_SHOW,
     ACTION_GIVE_FAVOR_LADY,
     ACTION_CONFIRM_QUIZ_LADY,
+    ACTION_SWAP_POKEBALL,
     ACTION_BY_NAME,
     ACTION_BY_TYPE,
     ACTION_BY_AMOUNT,
@@ -215,6 +217,8 @@ static void Task_ItemContext_GiveToParty(u8);
 static void Task_ItemContext_Sell(u8);
 static void Task_ItemContext_Deposit(u8);
 static void Task_ItemContext_GiveToPC(u8);
+static void AskSwapPokeballs(u8);
+static void ConfirmSwapPokeballs(u8);
 static void ConfirmToss(u8);
 static void CancelToss(u8);
 static void ConfirmSell(u8);
@@ -226,6 +230,7 @@ static const u8 sText_DepositHowManyVar1[] = _("Deposit how many\n{STR_VAR_1}?")
 static const u8 sText_DepositedVar2Var1s[] = _("Deposited {STR_VAR_2}\n{STR_VAR_1}.");
 static const u8 sText_NoRoomForItems[] = _("There's no room to\nstore items.");
 static const u8 sText_CantStoreImportantItems[] = _("Important items\ncan't be stored in\nthe PC!");
+static const u8 sText_MasterBallCannotBeSwapped[] = _("Master Ball cannot\nbe swapped.");
 
 static void Task_LoadBagSortOptions(u8 taskId);
 static void ItemMenu_SortByName(u8 taskId);
@@ -314,6 +319,7 @@ static const struct MenuAction sItemMenuActions[] = {
     [ACTION_SHOW]              = {COMPOUND_STRING("SHOW"),      {ItemMenu_Show}},
     [ACTION_GIVE_FAVOR_LADY]   = {gMenuText_Give2,              {ItemMenu_GiveFavorLady}},
     [ACTION_CONFIRM_QUIZ_LADY] = {gMenuText_Confirm,            {ItemMenu_ConfirmQuizLady}},
+    [ACTION_SWAP_POKEBALL]     = {COMPOUND_STRING("SWAP"),      {ConfirmSwapPokeballs}},
     [ACTION_BY_NAME]           = {COMPOUND_STRING("Name"),      {ItemMenu_SortByName}},
     [ACTION_BY_TYPE]           = {COMPOUND_STRING("Type"),      {ItemMenu_SortByType}},
     [ACTION_BY_AMOUNT]         = {COMPOUND_STRING("Amount"),    {ItemMenu_SortByAmount}},
@@ -356,6 +362,10 @@ static const u8 sContextMenuItems_BattleUse[] = {
 
 static const u8 sContextMenuItems_Give[] = {
     ACTION_GIVE,        ACTION_CANCEL
+};
+
+static const u8 sContextMenuItems_SwapPokeball[] = {
+    ACTION_SWAP_POKEBALL, ACTION_CANCEL
 };
 
 static const u8 sContextMenuItems_Cancel[] = {
@@ -2149,6 +2159,10 @@ static void Task_ItemContext_GiveToParty(u8 taskId)
         StringExpandPlaceholders(gStringVar4, sText_Var1CantBeHeldHere);
         DisplayItemMessage(taskId, FONT_NORMAL, gStringVar4, HandleErrorMessage);
     }
+    else if (gPartyMenuSwapBallMode)
+    {
+        AskSwapPokeballs(taskId);
+    }
     else if (gBagPosition.pocket != POCKET_KEY_ITEMS && !GetItemImportance(gSpecialVar_ItemId))
     {
         Task_FadeAndCloseBagMenu(taskId);
@@ -2157,6 +2171,33 @@ static void Task_ItemContext_GiveToParty(u8 taskId)
     {
         PrintItemCantBeHeld(taskId);
     }
+}
+
+static void AskSwapPokeballs(u8 taskId)
+{
+    struct Pokemon *mon = &gPlayerParty[gPartyMenu.slotId];
+    enum PokeBall oldBall = GetMonData(mon, MON_DATA_POKEBALL);
+    enum Item oldBallItem;
+
+    if (oldBall >= POKEBALL_COUNT)
+        oldBall = BALL_POKE;
+
+    oldBallItem = gPokeBalls[oldBall].itemId;
+    if (oldBallItem == ITEM_MASTER_BALL || gSpecialVar_ItemId == ITEM_MASTER_BALL)
+    {
+        DisplayItemMessage(taskId, FONT_NORMAL, sText_MasterBallCannotBeSwapped, HandleErrorMessage);
+        return;
+    }
+
+    gBagMenu->contextMenuItemsPtr = sContextMenuItems_SwapPokeball;
+    gBagMenu->contextMenuNumItems = ARRAY_COUNT(sContextMenuItems_SwapPokeball);
+    PrintContextMenuItems(BagMenu_AddWindow(ITEMWIN_1x2));
+    gTasks[taskId].func = Task_ItemContext_SingleRow;
+}
+
+static void ConfirmSwapPokeballs(u8 taskId)
+{
+    Task_FadeAndCloseBagMenu(taskId);
 }
 
 // Selected item to give to a Pokémon in PC storage
