@@ -24,6 +24,7 @@
 #include "palette.h"
 #include "pokeball.h"
 #include "pokedex.h"
+#include "pokemon_icon.h"
 #include "pokemon.h"
 #include "random.h"
 #include "rtc.h"
@@ -39,6 +40,9 @@
 #include "title_screen.h"
 #include "window.h"
 #include "mystery_gift_menu.h"
+
+extern const struct CompressedSpriteSheet gSpriteSheet_EnemyShadow;
+extern const struct SpriteTemplate gSpriteTemplate_EnemyShadow;
 
 /*
  * Main menu state machine
@@ -171,6 +175,8 @@
 // Static RAM declarations
 
 static EWRAM_DATA u16 sCurrItemAndOptionMenuCheck = 0;
+static EWRAM_DATA u8 sMainMenuMonIconSpriteIds[PARTY_SIZE];
+static EWRAM_DATA u8 sMainMenuMonShadowSpriteIds[PARTY_SIZE];
 
 // Static ROM declarations
 
@@ -229,6 +235,8 @@ static void MainMenu_FormatSavegamePlayer(void);
 static void MainMenu_FormatSavegamePokedex(void);
 static void MainMenu_FormatSavegameTime(void);
 static void MainMenu_FormatSavegameBadges(void);
+static void CreateMainMenuPartyIcons(void);
+static void DestroyMainMenuPartyIcons(void);
 
 // .rodata
 
@@ -261,18 +269,29 @@ static const u8 gText_ContinueMenuTime[] = _("TIME");
 static const u8 gText_ContinueMenuPokedex[] = _("POKéDEX");
 static const u8 gText_ContinueMenuBadges[] = _("BADGES");
 
+#define MAIN_MENU_ICON_SHADOW_PAL_TAG 0x4F10
+static const u16 sMainMenuMonShadowPal[] = {
+    RGB_BLACK, RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24),
+    RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24),
+    RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24),
+    RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24), RGB(24, 24, 24)
+};
+static const struct SpritePalette sMainMenuMonShadowSpritePal = {sMainMenuMonShadowPal, MAIN_MENU_ICON_SHADOW_PAL_TAG};
+
 #define MENU_LEFT 2
-#define MENU_TOP_WIN0 1
-#define MENU_TOP_WIN1 5
+#define MENU_COLUMN_GAP 2
+#define MENU_COLUMN_WIDTH 12
+#define MENU_TOP_WIN0 13
+#define MENU_TOP_WIN1 13
 #define MENU_TOP_WIN2 1
-#define MENU_TOP_WIN3 9
+#define MENU_TOP_WIN3 13
 #define MENU_TOP_WIN4 13
 #define MENU_TOP_WIN5 17
-#define MENU_TOP_WIN6 21
+#define MENU_TOP_WIN6 17
 #define MENU_WIDTH 26
 #define MENU_HEIGHT_WIN0 2
 #define MENU_HEIGHT_WIN1 2
-#define MENU_HEIGHT_WIN2 6
+#define MENU_HEIGHT_WIN2 10
 #define MENU_HEIGHT_WIN3 2
 #define MENU_HEIGHT_WIN4 2
 #define MENU_HEIGHT_WIN5 2
@@ -286,8 +305,9 @@ static const u8 gText_ContinueMenuBadges[] = _("BADGES");
 #define MENU_SHADOW_PADDING 1
 
 #define MENU_WIN_HCOORDS WIN_RANGE(((MENU_LEFT - 1) * 8) + MENU_SHADOW_PADDING, (MENU_LEFT + MENU_WIDTH + 1) * 8 - MENU_SHADOW_PADDING)
+#define MENU_WIN_HCOORDS_COL0 WIN_RANGE(((MENU_LEFT - 1) * 8) + MENU_SHADOW_PADDING, (MENU_LEFT + MENU_COLUMN_WIDTH + 1) * 8 - MENU_SHADOW_PADDING)
+#define MENU_WIN_HCOORDS_COL1 WIN_RANGE(((MENU_LEFT + MENU_COLUMN_WIDTH + MENU_COLUMN_GAP - 1) * 8) + MENU_SHADOW_PADDING, (MENU_LEFT + MENU_COLUMN_WIDTH + MENU_COLUMN_GAP + MENU_COLUMN_WIDTH + 1) * 8 - MENU_SHADOW_PADDING)
 #define MENU_WIN_VCOORDS(n) WIN_RANGE(((MENU_TOP_WIN##n - 1) * 8) + MENU_SHADOW_PADDING, (MENU_TOP_WIN##n + MENU_HEIGHT_WIN##n + 1) * 8 - MENU_SHADOW_PADDING)
-#define MENU_SCROLL_SHIFT WIN_RANGE(32, 32)
 
 static const struct WindowTemplate sWindowTemplates_MainMenu[] =
 {
@@ -297,7 +317,7 @@ static const struct WindowTemplate sWindowTemplates_MainMenu[] =
         .bg = 0,
         .tilemapLeft = MENU_LEFT,
         .tilemapTop = MENU_TOP_WIN0,
-        .width = MENU_WIDTH,
+        .width = MENU_COLUMN_WIDTH,
         .height = MENU_HEIGHT_WIN0,
         .paletteNum = 15,
         .baseBlock = 1
@@ -305,12 +325,12 @@ static const struct WindowTemplate sWindowTemplates_MainMenu[] =
     // OPTIONS
     {
         .bg = 0,
-        .tilemapLeft = MENU_LEFT,
+        .tilemapLeft = MENU_LEFT + MENU_COLUMN_WIDTH + MENU_COLUMN_GAP,
         .tilemapTop = MENU_TOP_WIN1,
-        .width = MENU_WIDTH,
+        .width = MENU_COLUMN_WIDTH,
         .height = MENU_HEIGHT_WIN1,
         .paletteNum = 15,
-        .baseBlock = 0x35
+        .baseBlock = 0x19
     },
     // Has saved game
     // CONTINUE
@@ -321,47 +341,47 @@ static const struct WindowTemplate sWindowTemplates_MainMenu[] =
         .width = MENU_WIDTH,
         .height = MENU_HEIGHT_WIN2,
         .paletteNum = 15,
-        .baseBlock = 1
+        .baseBlock = 0x31
     },
     // NEW GAME
     {
         .bg = 0,
         .tilemapLeft = MENU_LEFT,
         .tilemapTop = MENU_TOP_WIN3,
-        .width = MENU_WIDTH,
+        .width = MENU_COLUMN_WIDTH,
         .height = MENU_HEIGHT_WIN3,
         .paletteNum = 15,
-        .baseBlock = 0x9D
+        .baseBlock = 0x135
     },
     // OPTION / MYSTERY GIFT
     {
         .bg = 0,
-        .tilemapLeft = MENU_LEFT,
+        .tilemapLeft = MENU_LEFT + MENU_COLUMN_WIDTH + MENU_COLUMN_GAP,
         .tilemapTop = MENU_TOP_WIN4,
-        .width = MENU_WIDTH,
+        .width = MENU_COLUMN_WIDTH,
         .height = MENU_HEIGHT_WIN4,
         .paletteNum = 15,
-        .baseBlock = 0xD1
+        .baseBlock = 0x14D
     },
     // OPTION / MYSTERY EVENTS
     {
         .bg = 0,
         .tilemapLeft = MENU_LEFT,
         .tilemapTop = MENU_TOP_WIN5,
-        .width = MENU_WIDTH,
+        .width = MENU_COLUMN_WIDTH,
         .height = MENU_HEIGHT_WIN5,
         .paletteNum = 15,
-        .baseBlock = 0x105
+        .baseBlock = 0x165
     },
     // OPTION
     {
         .bg = 0,
-        .tilemapLeft = MENU_LEFT,
+        .tilemapLeft = MENU_LEFT + MENU_COLUMN_WIDTH + MENU_COLUMN_GAP,
         .tilemapTop = MENU_TOP_WIN6,
-        .width = MENU_WIDTH,
+        .width = MENU_COLUMN_WIDTH,
         .height = MENU_HEIGHT_WIN6,
         .paletteNum = 15,
-        .baseBlock = 0x139
+        .baseBlock = 0x17D
     },
     // Error message window
     {
@@ -371,7 +391,7 @@ static const struct WindowTemplate sWindowTemplates_MainMenu[] =
         .width = MENU_WIDTH_ERROR,
         .height = MENU_HEIGHT_ERROR,
         .paletteNum = 15,
-        .baseBlock = 0x16D
+        .baseBlock = 0x195
     },
     DUMMY_WIN_TEMPLATE
 };
@@ -412,7 +432,7 @@ static const u16 sMainMenuBgPal[] = INCBIN_U16("graphics/interface/main_menu_bg.
 static const u16 sMainMenuTextPal[] = INCBIN_U16("graphics/interface/main_menu_text.gbapal");
 
 static const u8 sTextColor_Headers[] = {TEXT_DYNAMIC_COLOR_1, TEXT_DYNAMIC_COLOR_2, TEXT_DYNAMIC_COLOR_3};
-static const u8 sTextColor_MenuInfo[] = {TEXT_DYNAMIC_COLOR_1, TEXT_COLOR_WHITE, TEXT_DYNAMIC_COLOR_3};
+static const u8 sTextColor_MenuInfoBlue[] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_BLUE, TEXT_COLOR_LIGHT_BLUE};
 
 static const struct BgTemplate sMainMenuBgTemplates[] = {
     {
@@ -444,8 +464,6 @@ static const struct BgTemplate sBirchBgTemplate = {
     .priority = 0,
     .baseTile = 0
 };
-
-static const struct ScrollArrowsTemplate sScrollArrowsTemplate_MainMenu = {2, 0x78, 8, 3, 0x78, 0x98, 3, 4, 1, 1, 0};
 
 static const union AffineAnimCmd sSpriteAffineAnim_PlayerShrink[] = {
     AFFINEANIMCMD_FRAME(-2, -2, 0, 0x30),
@@ -529,6 +547,8 @@ void CB2_ReinitMainMenu(void)
 
 static u32 InitMainMenu(bool8 returningFromOptionsMenu)
 {
+    u32 i;
+
     SetVBlankCallback(NULL);
 
     SetGpuReg(REG_OFFSET_DISPCNT, 0);
@@ -545,6 +565,12 @@ static u32 InitMainMenu(bool8 returningFromOptionsMenu)
     DmaFill16(3, 0, (void *)VRAM, VRAM_SIZE);
     DmaFill32(3, 0, (void *)OAM, OAM_SIZE);
     DmaFill16(3, 0, (void *)(PLTT + 2), PLTT_SIZE - 2);
+
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        sMainMenuMonIconSpriteIds[i] = SPRITE_NONE;
+        sMainMenuMonShadowSpriteIds[i] = SPRITE_NONE;
+    }
 
     ResetPaletteFade();
     LoadPalette(sMainMenuBgPal, BG_PLTT_ID(0), PLTT_SIZE_4BPP);
@@ -589,11 +615,8 @@ static u32 InitMainMenu(bool8 returningFromOptionsMenu)
 #define tMenuType data[0]
 #define tCurrItem data[1]
 #define tItemCount data[12]
-#define tScrollArrowTaskId data[13]
 #define tIsScrolled data[14]
 #define tWirelessAdapterConnected data[15]
-
-#define tArrowTaskIsScrolled data[15]   // For scroll indicator arrow task
 
 static void Task_MainMenuCheckSaveFile(u8 taskId)
 {
@@ -615,8 +638,8 @@ static void Task_MainMenuCheckSaveFile(u8 taskId)
         {
         case SAVE_STATUS_OK:
             tMenuType = HAS_SAVED_GAME;
-            if (IsMysteryGiftEnabled())
-                tMenuType++;
+            // if (IsMysteryGiftEnabled())
+            //     tMenuType++;
             gTasks[taskId].func = Task_MainMenuCheckBattery;
             break;
         case SAVE_STATUS_CORRUPT:
@@ -628,8 +651,8 @@ static void Task_MainMenuCheckSaveFile(u8 taskId)
             CreateMainMenuErrorWindow(gText_SaveFileCorrupted);
             gTasks[taskId].func = Task_WaitForSaveFileErrorWindow;
             tMenuType = HAS_SAVED_GAME;
-            if (IsMysteryGiftEnabled() == TRUE)
-                tMenuType++;
+            // if (IsMysteryGiftEnabled() == TRUE)
+            //     tMenuType++;
             break;
         case SAVE_STATUS_EMPTY:
         default:
@@ -651,10 +674,10 @@ static void Task_MainMenuCheckSaveFile(u8 taskId)
                 sCurrItemAndOptionMenuCheck = tMenuType + 1;
                 break;
             case HAS_MYSTERY_GIFT:
-                sCurrItemAndOptionMenuCheck = 3;
+                sCurrItemAndOptionMenuCheck = 2;
                 break;
             case HAS_MYSTERY_EVENTS:
-                sCurrItemAndOptionMenuCheck = 4;
+                sCurrItemAndOptionMenuCheck = 2;
                 break;
             }
         }
@@ -790,8 +813,8 @@ static void Task_DisplayMainMenu(u8 taskId)
             FillWindowPixelBuffer(5, PIXEL_FILL(0xA));
             AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
             AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift);
-            AddTextPrinterParameterized3(5, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(5, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift);
             MainMenu_FormatSavegameText();
             PutWindowTilemap(2);
             PutWindowTilemap(3);
@@ -814,9 +837,9 @@ static void Task_DisplayMainMenu(u8 taskId)
             FillWindowPixelBuffer(6, PIXEL_FILL(0xA));
             AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuContinue);
             AddTextPrinterParameterized3(3, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuNewGame);
-            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift2);
-            AddTextPrinterParameterized3(5, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryEvents);
-            AddTextPrinterParameterized3(6, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(4, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuOption);
+            AddTextPrinterParameterized3(5, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryGift2);
+            AddTextPrinterParameterized3(6, FONT_NORMAL, 0, 1, sTextColor_Headers, TEXT_SKIP_DRAW, gText_MainMenuMysteryEvents);
             MainMenu_FormatSavegameText();
             PutWindowTilemap(2);
             PutWindowTilemap(3);
@@ -833,15 +856,7 @@ static void Task_DisplayMainMenu(u8 taskId)
             DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[4], MAIN_MENU_BORDER_TILE);
             DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[5], MAIN_MENU_BORDER_TILE);
             DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[6], MAIN_MENU_BORDER_TILE);
-            tScrollArrowTaskId = AddScrollIndicatorArrowPair(&sScrollArrowsTemplate_MainMenu, &sCurrItemAndOptionMenuCheck);
-            gTasks[tScrollArrowTaskId].func = Task_ScrollIndicatorArrowPairOnMainMenu;
-            if (sCurrItemAndOptionMenuCheck == 4)
-            {
-                ChangeBgY(0, 0x2000, BG_COORD_ADD);
-                ChangeBgY(1, 0x2000, BG_COORD_ADD);
-                tIsScrolled = TRUE;
-                gTasks[tScrollArrowTaskId].tArrowTaskIsScrolled = TRUE;
-            }
+            tIsScrolled = FALSE;
             break;
         }
         gTasks[taskId].func = Task_HighlightSelectedMainMenuItem;
@@ -861,7 +876,6 @@ static bool8 HandleMainMenuInput(u8 taskId)
     if (JOY_NEW(A_BUTTON))
     {
         PlaySE(SE_SELECT);
-        IsWirelessAdapterConnected();   // why bother calling this here? debug? Task_HandleMainMenuAPressed will check too
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 0x10, RGB_BLACK);
         gTasks[taskId].func = Task_HandleMainMenuAPressed;
     }
@@ -873,29 +887,199 @@ static bool8 HandleMainMenuInput(u8 taskId)
         SetGpuReg(REG_OFFSET_WIN0V, WIN_RANGE(0, DISPLAY_HEIGHT));
         gTasks[taskId].func = Task_HandleMainMenuBPressed;
     }
-    else if ((JOY_NEW(DPAD_UP)) && tCurrItem > 0)
+    else
     {
-        if (tMenuType == HAS_MYSTERY_EVENTS && tIsScrolled == TRUE && tCurrItem == 1)
+        if (tMenuType == HAS_NO_SAVED_GAME)
         {
-            ChangeBgY(0, 0x2000, BG_COORD_SUB);
-            ChangeBgY(1, 0x2000, BG_COORD_SUB);
-            gTasks[tScrollArrowTaskId].tArrowTaskIsScrolled = tIsScrolled = FALSE;
+            if ((JOY_NEW(DPAD_LEFT) && tCurrItem == 1)
+             || (JOY_NEW(DPAD_RIGHT) && tCurrItem == 0)
+             || (JOY_NEW(DPAD_UP) && tCurrItem == 1)
+             || (JOY_NEW(DPAD_DOWN) && tCurrItem == 0))
+            {
+                tCurrItem ^= 1;
+                sCurrItemAndOptionMenuCheck = tCurrItem;
+                return TRUE;
+            }
         }
-        tCurrItem--;
-        sCurrItemAndOptionMenuCheck = tCurrItem;
-        return TRUE;
-    }
-    else if ((JOY_NEW(DPAD_DOWN)) && tCurrItem < tItemCount - 1)
-    {
-        if (tMenuType == HAS_MYSTERY_EVENTS && tCurrItem == 3 && tIsScrolled == FALSE)
+        else // HAS_SAVED_GAME
         {
-            ChangeBgY(0, 0x2000, BG_COORD_ADD);
-            ChangeBgY(1, 0x2000, BG_COORD_ADD);
-            gTasks[tScrollArrowTaskId].tArrowTaskIsScrolled = tIsScrolled = TRUE;
+            if (tMenuType == HAS_MYSTERY_GIFT)
+            {
+                if (JOY_NEW(DPAD_UP) && tCurrItem != 0)
+                {
+                    tCurrItem = (tCurrItem == 3) ? 1 : 0;
+                    sCurrItemAndOptionMenuCheck = tCurrItem;
+                    return TRUE;
+                }
+                if (JOY_NEW(DPAD_DOWN))
+                {
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 1 || tCurrItem == 2)
+                    {
+                        tCurrItem = 3;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+                if (JOY_NEW(DPAD_LEFT))
+                {
+                    if (tCurrItem == 2)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+                if (JOY_NEW(DPAD_RIGHT))
+                {
+                    if (tCurrItem == 1)
+                    {
+                        tCurrItem = 2;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 2;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+            }
+            else if (tMenuType == HAS_MYSTERY_EVENTS)
+            {
+                if (JOY_NEW(DPAD_UP) && tCurrItem != 0)
+                {
+                    if (tCurrItem == 1 || tCurrItem == 2)
+                        tCurrItem = 0;
+                    else if (tCurrItem == 3)
+                        tCurrItem = 1;
+                    else
+                        tCurrItem = 2;
+                    sCurrItemAndOptionMenuCheck = tCurrItem;
+                    return TRUE;
+                }
+                if (JOY_NEW(DPAD_DOWN))
+                {
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 1)
+                    {
+                        tCurrItem = 3;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 2)
+                    {
+                        tCurrItem = 4;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+                if (JOY_NEW(DPAD_LEFT))
+                {
+                    if (tCurrItem == 2)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 4)
+                    {
+                        tCurrItem = 3;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+                if (JOY_NEW(DPAD_RIGHT))
+                {
+                    if (tCurrItem == 1)
+                    {
+                        tCurrItem = 2;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 3)
+                    {
+                        tCurrItem = 4;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 2;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+            }
+            else
+            {
+                if (JOY_NEW(DPAD_UP) && tCurrItem != 0)
+                {
+                    tCurrItem = 0;
+                    sCurrItemAndOptionMenuCheck = tCurrItem;
+                    return TRUE;
+                }
+                if (JOY_NEW(DPAD_DOWN) && tCurrItem == 0)
+                {
+                    tCurrItem = 1;
+                    sCurrItemAndOptionMenuCheck = tCurrItem;
+                    return TRUE;
+                }
+                if (JOY_NEW(DPAD_LEFT))
+                {
+                    if (tCurrItem == 2)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 1;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+                if (JOY_NEW(DPAD_RIGHT))
+                {
+                    if (tCurrItem == 1)
+                    {
+                        tCurrItem = 2;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                    if (tCurrItem == 0)
+                    {
+                        tCurrItem = 2;
+                        sCurrItemAndOptionMenuCheck = tCurrItem;
+                        return TRUE;
+                    }
+                }
+            }
         }
-        tCurrItem++;
-        sCurrItemAndOptionMenuCheck = tCurrItem;
-        return TRUE;
     }
     return FALSE;
 }
@@ -908,13 +1092,13 @@ static void Task_HandleMainMenuInput(u8 taskId)
 
 static void Task_HandleMainMenuAPressed(u8 taskId)
 {
-    bool8 wirelessAdapterConnected;
     u8 action;
 
     if (!gPaletteFade.active)
     {
-        if (gTasks[taskId].tMenuType == HAS_MYSTERY_EVENTS)
-            RemoveScrollIndicatorArrowPair(gTasks[taskId].tScrollArrowTaskId);
+        bool8 wirelessAdapterConnected;
+
+        DestroyMainMenuPartyIcons();
         ClearStdWindowAndFrame(0, TRUE);
         ClearStdWindowAndFrame(1, TRUE);
         ClearStdWindowAndFrame(2, TRUE);
@@ -965,15 +1149,15 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
                 action = ACTION_NEW_GAME;
                 break;
             case 2:
+                action = ACTION_OPTION;
+                break;
+            case 3:
                 action = ACTION_MYSTERY_GIFT;
                 if (!wirelessAdapterConnected)
                 {
                     action = ACTION_INVALID;
                     gTasks[taskId].tMenuType = HAS_NO_SAVED_GAME;
                 }
-                break;
-            case 3:
-                action = ACTION_OPTION;
                 break;
             }
             break;
@@ -988,6 +1172,9 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
                 action = ACTION_NEW_GAME;
                 break;
             case 2:
+                action = ACTION_OPTION;
+                break;
+            case 3:
                 if (gTasks[taskId].tWirelessAdapterConnected)
                 {
                     action = ACTION_MYSTERY_GIFT;
@@ -1007,19 +1194,16 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
                     action = ACTION_EREADER;
                 }
                 break;
-            case 3:
+            case 4:
                 if (wirelessAdapterConnected)
                 {
                     action = ACTION_INVALID;
-                    gTasks[taskId].tMenuType = HAS_MYSTERY_GIFT;
+                    gTasks[taskId].tMenuType = HAS_MYSTERY_EVENTS;
                 }
                 else
                 {
                     action = ACTION_MYSTERY_EVENTS;
                 }
-                break;
-            case 4:
-                action = ACTION_OPTION;
                 break;
             }
             break;
@@ -1095,8 +1279,7 @@ static void Task_HandleMainMenuBPressed(u8 taskId)
 {
     if (!gPaletteFade.active)
     {
-        if (gTasks[taskId].tMenuType == HAS_MYSTERY_EVENTS)
-            RemoveScrollIndicatorArrowPair(gTasks[taskId].tScrollArrowTaskId);
+        DestroyMainMenuPartyIcons();
         sCurrItemAndOptionMenuCheck = 0;
         FreeAllWindowBuffers();
         SetMainCallback2(CB2_InitTitleScreen);
@@ -1146,15 +1329,12 @@ static void Task_DisplayMainMenuInvalidActionError(u8 taskId)
 #undef tMenuType
 #undef tCurrItem
 #undef tItemCount
-#undef tScrollArrowTaskId
 #undef tIsScrolled
 #undef tWirelessAdapterConnected
 
-#undef tArrowTaskIsScrolled
-
 static void HighlightSelectedMainMenuItem(u8 menuType, u8 selectedMenuItem, s16 isScrolled)
 {
-    SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS);
+    (void)isScrolled;
 
     switch (menuType)
     {
@@ -1164,9 +1344,11 @@ static void HighlightSelectedMainMenuItem(u8 menuType, u8 selectedMenuItem, s16 
         {
         case 0:
         default:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL0);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(0));
             break;
         case 1:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL1);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(1));
             break;
         }
@@ -1176,12 +1358,15 @@ static void HighlightSelectedMainMenuItem(u8 menuType, u8 selectedMenuItem, s16 
         {
         case 0:
         default:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(2));
             break;
         case 1:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL0);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
             break;
         case 2:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL1);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
             break;
         }
@@ -1191,15 +1376,19 @@ static void HighlightSelectedMainMenuItem(u8 menuType, u8 selectedMenuItem, s16 
         {
         case 0:
         default:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(2));
             break;
         case 1:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL0);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
             break;
         case 2:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL1);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
             break;
         case 3:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL0);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5));
             break;
         }
@@ -1209,28 +1398,24 @@ static void HighlightSelectedMainMenuItem(u8 menuType, u8 selectedMenuItem, s16 
         {
         case 0:
         default:
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS);
             SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(2));
             break;
         case 1:
-            if (isScrolled)
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3) - MENU_SCROLL_SHIFT);
-            else
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL0);
+            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(3));
             break;
         case 2:
-            if (isScrolled)
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4) - MENU_SCROLL_SHIFT);
-            else
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL1);
+            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(4));
             break;
         case 3:
-            if (isScrolled)
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5) - MENU_SCROLL_SHIFT);
-            else
-                SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5));
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL0);
+            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(5));
             break;
         case 4:
-            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(6) - MENU_SCROLL_SHIFT);
+            SetGpuReg(REG_OFFSET_WIN0H, MENU_WIN_HCOORDS_COL1);
+            SetGpuReg(REG_OFFSET_WIN0V, MENU_WIN_VCOORDS(6));
             break;
         }
         break;
@@ -1931,13 +2116,14 @@ static void MainMenu_FormatSavegameText(void)
     MainMenu_FormatSavegamePokedex();
     MainMenu_FormatSavegameTime();
     MainMenu_FormatSavegameBadges();
+    CreateMainMenuPartyIcons();
 }
 
 static void MainMenu_FormatSavegamePlayer(void)
 {
     StringExpandPlaceholders(gStringVar4, gText_ContinueMenuPlayer);
-    AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 17, sTextColor_MenuInfo, TEXT_SKIP_DRAW, gStringVar4);
-    AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringRightAlignXOffset(FONT_NORMAL, gSaveBlock2Ptr->playerName, 100), 17, sTextColor_MenuInfo, TEXT_SKIP_DRAW, gSaveBlock2Ptr->playerName);
+    AddTextPrinterParameterized3(2, FONT_SMALL, 0, 17, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, gStringVar4);
+    AddTextPrinterParameterized3(2, FONT_SMALL, GetStringRightAlignXOffset(FONT_SMALL, gSaveBlock2Ptr->playerName, 100), 17, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, gSaveBlock2Ptr->playerName);
 }
 
 static void MainMenu_FormatSavegameTime(void)
@@ -1946,11 +2132,11 @@ static void MainMenu_FormatSavegameTime(void)
     u8 *ptr;
 
     StringExpandPlaceholders(gStringVar4, gText_ContinueMenuTime);
-    AddTextPrinterParameterized3(2, FONT_NORMAL, 0x6C, 17, sTextColor_MenuInfo, TEXT_SKIP_DRAW, gStringVar4);
+    AddTextPrinterParameterized3(2, FONT_SMALL, 0x6C, 17, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, gStringVar4);
     ptr = ConvertIntToDecimalStringN(str, gSaveBlock2Ptr->playTimeHours, STR_CONV_MODE_LEFT_ALIGN, 3);
     *ptr = 0xF0;
     ConvertIntToDecimalStringN(ptr + 1, gSaveBlock2Ptr->playTimeMinutes, STR_CONV_MODE_LEADING_ZEROS, 2);
-    AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringRightAlignXOffset(FONT_NORMAL, str, 0xD0), 17, sTextColor_MenuInfo, TEXT_SKIP_DRAW, str);
+    AddTextPrinterParameterized3(2, FONT_SMALL, GetStringRightAlignXOffset(FONT_SMALL, str, 0xD0), 17, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, str);
 }
 
 static void MainMenu_FormatSavegamePokedex(void)
@@ -1965,9 +2151,9 @@ static void MainMenu_FormatSavegamePokedex(void)
         else
             dexCount = GetRegionalPokedexCount(FLAG_GET_CAUGHT);
         StringExpandPlaceholders(gStringVar4, gText_ContinueMenuPokedex);
-        AddTextPrinterParameterized3(2, FONT_NORMAL, 0, 33, sTextColor_MenuInfo, TEXT_SKIP_DRAW, gStringVar4);
+        AddTextPrinterParameterized3(2, FONT_SMALL, 0, 29, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, gStringVar4);
         ConvertIntToDecimalStringN(str, dexCount, STR_CONV_MODE_LEFT_ALIGN, 4);
-        AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringRightAlignXOffset(FONT_NORMAL, str, 100), 33, sTextColor_MenuInfo, TEXT_SKIP_DRAW, str);
+        AddTextPrinterParameterized3(2, FONT_SMALL, GetStringRightAlignXOffset(FONT_SMALL, str, 100), 29, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, str);
     }
 }
 
@@ -1983,9 +2169,80 @@ static void MainMenu_FormatSavegameBadges(void)
             badgeCount++;
     }
     StringExpandPlaceholders(gStringVar4, gText_ContinueMenuBadges);
-    AddTextPrinterParameterized3(2, FONT_NORMAL, 0x6C, 33, sTextColor_MenuInfo, TEXT_SKIP_DRAW, gStringVar4);
+    AddTextPrinterParameterized3(2, FONT_SMALL, 0x6C, 29, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, gStringVar4);
     ConvertIntToDecimalStringN(str, badgeCount, STR_CONV_MODE_LEADING_ZEROS, 1);
-    AddTextPrinterParameterized3(2, FONT_NORMAL, GetStringRightAlignXOffset(FONT_NORMAL, str, 0xD0), 33, sTextColor_MenuInfo, TEXT_SKIP_DRAW, str);
+    AddTextPrinterParameterized3(2, FONT_SMALL, GetStringRightAlignXOffset(FONT_SMALL, str, 0xD0), 29, sTextColor_MenuInfoBlue, TEXT_SKIP_DRAW, str);
+}
+
+static void CreateMainMenuPartyIcons(void)
+{
+    u32 i;
+    u32 monCount = CalculatePlayerPartyCount();
+    s32 centeredLeft;
+    s32 spacing = 34;
+    s32 firstSlot;
+
+    DestroyMainMenuPartyIcons();
+    LoadMonIconPalettes();
+    LoadCompressedSpriteSheet(&gSpriteSheet_EnemyShadow);
+    LoadSpritePalette(&sMainMenuMonShadowSpritePal);
+
+    if (monCount > PARTY_SIZE)
+        monCount = PARTY_SIZE;
+
+    centeredLeft = 120 - ((PARTY_SIZE - 1) * spacing) / 2;
+    firstSlot = PARTY_SIZE - monCount;
+    for (i = 0; i < monCount; i++)
+    {
+        struct SpriteTemplate shadowTemplate = gSpriteTemplate_EnemyShadow;
+        u32 species = GetMonData(&gPlayerParty[i], MON_DATA_SPECIES_OR_EGG);
+        u32 personality = GetMonData(&gPlayerParty[i], MON_DATA_PERSONALITY);
+        bool32 isEgg = GetMonData(&gPlayerParty[i], MON_DATA_IS_EGG);
+        s16 x = centeredLeft + (firstSlot + i) * spacing;
+        s16 y = 70;
+
+        shadowTemplate.paletteTag = MAIN_MENU_ICON_SHADOW_PAL_TAG;
+        shadowTemplate.callback = SpriteCallbackDummy;
+
+        sMainMenuMonShadowSpriteIds[i] = CreateSprite(&shadowTemplate, x, y + 14, 0);
+        if (sMainMenuMonShadowSpriteIds[i] != MAX_SPRITES)
+        {
+            gSprites[sMainMenuMonShadowSpriteIds[i]].oam.priority = 0;
+            gSprites[sMainMenuMonShadowSpriteIds[i]].subpriority = 2;
+        }
+        else
+        {
+            sMainMenuMonShadowSpriteIds[i] = SPRITE_NONE;
+        }
+
+        sMainMenuMonIconSpriteIds[i] = CreateMonIconIsEgg(species, SpriteCB_MonIcon, x, y, 0, personality, isEgg);
+        gSprites[sMainMenuMonIconSpriteIds[i]].oam.priority = 0;
+        gSprites[sMainMenuMonIconSpriteIds[i]].subpriority = 0;
+    }
+}
+
+static void DestroyMainMenuPartyIcons(void)
+{
+    u32 i;
+
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        if (sMainMenuMonShadowSpriteIds[i] != SPRITE_NONE)
+        {
+            DestroySprite(&gSprites[sMainMenuMonShadowSpriteIds[i]]);
+            sMainMenuMonShadowSpriteIds[i] = SPRITE_NONE;
+        }
+
+        if (sMainMenuMonIconSpriteIds[i] != SPRITE_NONE)
+        {
+            FreeAndDestroyMonIconSprite(&gSprites[sMainMenuMonIconSpriteIds[i]]);
+            sMainMenuMonIconSpriteIds[i] = SPRITE_NONE;
+        }
+    }
+
+    FreeSpriteTilesByTag(gSpriteSheet_EnemyShadow.tag);
+    FreeSpritePaletteByTag(MAIN_MENU_ICON_SHADOW_PAL_TAG);
+    FreeMonIconPalettes();
 }
 
 static void LoadMainMenuWindowFrameTiles(u8 bgId, u16 tileOffset)
