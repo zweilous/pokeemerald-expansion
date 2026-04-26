@@ -8,6 +8,7 @@
 #include "gpu_regs.h"
 #include "trig.h"
 #include "main.h"
+#include "title_screen.h"
 #include "intro.h"
 #include "intro_frlg.h"
 #include "m4a.h"
@@ -282,8 +283,7 @@ void Task_HandleExpansionIntro(u8 taskId)
             }
             else
             {
-                CreateTask(Task_Scene1_Load, 0);
-                SetMainCallback2(MainCB2_Intro);
+                SetMainCallback2(CB2_InitTitleScreen);
             }
         }
         break;
