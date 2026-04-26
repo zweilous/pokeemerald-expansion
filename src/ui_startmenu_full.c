@@ -804,7 +804,7 @@ static void DestroyGreyMenuBoxes()
 #define AILMENT_PKRS  6
 #define AILMENT_FNT   7
 
-#define ICON_STATUS_1_START_X  24
+#define ICON_STATUS_1_START_X  23
 #define ICON_STATUS_1_START_Y  29
 
 static void CreatePartyMonStatuses()
@@ -816,7 +816,7 @@ static void CreatePartyMonStatuses()
 
     for(i = 0; i < gPlayerPartyCount; i++)
     {
-        x = (ICON_STATUS_1_START_X - 3) + (PARTY_ROW_X_DIFFERENCE * i);
+        x = (ICON_STATUS_1_START_X - 3) + (PARTY_ROW_X_DIFFERENCE * i) + PARTY_ROW_SLOT_OFFSET(i);
         y = ICON_STATUS_1_START_Y;
 
         sStartMenuDataPtr->iconStatusSpriteIds[i] = CreateSprite(&sSpriteTemplate_StatusIcons, x, y, 0);
@@ -1452,6 +1452,7 @@ static void Task_StartMenuFullMain(u8 taskId)
     {
         if (JOY_NEW(DPAD_LEFT))
         {
+            PlaySE(SE_SELECT);
             if (sStartMenuDataPtr->selector_x == 0)
                 sStartMenuDataPtr->selector_x = 3;
             else
@@ -1459,6 +1460,7 @@ static void Task_StartMenuFullMain(u8 taskId)
         }
         else
         {
+            PlaySE(SE_SELECT);
             if (sStartMenuDataPtr->selector_x == 3)
                 sStartMenuDataPtr->selector_x = 0;
             else
@@ -1467,6 +1469,7 @@ static void Task_StartMenuFullMain(u8 taskId)
     }
     if (JOY_NEW(DPAD_UP))
     {
+        PlaySE(SE_SELECT);
         if (sStartMenuDataPtr->selector_y == 0)
             sStartMenuDataPtr->selector_y = 1;
         else
@@ -1474,6 +1477,7 @@ static void Task_StartMenuFullMain(u8 taskId)
     }
     if (JOY_NEW(DPAD_DOWN))
     {
+        PlaySE(SE_SELECT);
         if (sStartMenuDataPtr->selector_y == 1)
             sStartMenuDataPtr->selector_y = 0;
         else
@@ -1555,6 +1559,7 @@ static void Task_StartMenuFullMain(u8 taskId)
 
     if (JOY_NEW(START_BUTTON)) // If start button pressed go to Save Confirmation Control Task
     {
+        PlaySE(SE_SELECT);
         PrintSaveConfirmToWindow();
         gTasks[taskId].func = Task_HandleSaveConfirmation;
     }

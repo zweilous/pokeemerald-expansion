@@ -237,6 +237,7 @@ static void MainMenu_FormatSavegameTime(void);
 static void MainMenu_FormatSavegameBadges(void);
 static void CreateMainMenuPartyIcons(void);
 static void DestroyMainMenuPartyIcons(void);
+static void SetMainMenuPartyIconAnimation(bool8 animate);
 
 // .rodata
 
@@ -1336,6 +1337,9 @@ static void HighlightSelectedMainMenuItem(u8 menuType, u8 selectedMenuItem, s16 
 {
     (void)isScrolled;
 
+    // Party icon animation is only active while CONTINUE is highlighted.
+    SetMainMenuPartyIconAnimation(menuType != HAS_NO_SAVED_GAME && selectedMenuItem == 0);
+
     switch (menuType)
     {
     case HAS_NO_SAVED_GAME:
@@ -2243,6 +2247,22 @@ static void DestroyMainMenuPartyIcons(void)
     FreeSpriteTilesByTag(gSpriteSheet_EnemyShadow.tag);
     FreeSpritePaletteByTag(MAIN_MENU_ICON_SHADOW_PAL_TAG);
     FreeMonIconPalettes();
+}
+
+static void SetMainMenuPartyIconAnimation(bool8 animate)
+{
+    u32 i;
+
+    for (i = 0; i < PARTY_SIZE; i++)
+    {
+        if (sMainMenuMonIconSpriteIds[i] == SPRITE_NONE)
+            continue;
+
+        if (animate)
+            gSprites[sMainMenuMonIconSpriteIds[i]].callback = SpriteCB_MonIcon;
+        else
+            gSprites[sMainMenuMonIconSpriteIds[i]].callback = SpriteCallbackDummy;
+    }
 }
 
 static void LoadMainMenuWindowFrameTiles(u8 bgId, u16 tileOffset)
