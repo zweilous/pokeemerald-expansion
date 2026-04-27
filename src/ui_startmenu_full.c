@@ -5,6 +5,8 @@
 #include "data.h"
 #include "decompress.h"
 #include "event_data.h"
+#include "event_scripts.h"
+#include "field_screen_effect.h"
 #include "field_weather.h"
 #include "gpu_regs.h"
 #include "graphics.h"
@@ -116,6 +118,7 @@ static void Task_StartMenuFullWaitFadeIn(u8 taskId);
 static void Task_StartMenuFullMain(u8 taskId);
 static void Task_OpenTownMapFromStartMenu(u8 taskId);
 static void StartMenuFull_OpenTownMapFieldCallback(void);
+static void Task_OpenTownMapFromStartMenu_WaitForWeather(u8 taskId);
 static u32 GetHPEggCyclePercent(u32 partyIndex);
 static void PrintMapNameAndTime(void);
 static void CursorCallback(struct Sprite *sprite);
@@ -1372,15 +1375,18 @@ void Task_OpenTownMapFromStartMenu(u8 taskId)
 
 static void StartMenuFull_OpenTownMapFieldCallback(void)
 {
-    u8 itemTaskId;
+    FadeInFromBlack();
+    CreateTask(Task_OpenTownMapFromStartMenu_WaitForWeather, 8);
+}
 
-    LockPlayerFieldControls();
-    FreezeObjectEvents();
-    PlayerFreeze();
-    StopPlayerAvatar();
-    gSpecialVar_ItemId = ITEM_TOWN_MAP;
-    itemTaskId = CreateTask(GetItemFieldFunc(ITEM_TOWN_MAP), 8);
-    gTasks[itemTaskId].data[3] = TRUE; // tUsingRegisteredKeyItem
+static void Task_OpenTownMapFromStartMenu_WaitForWeather(u8 taskId)
+{
+    if (IsWeatherNotFadingIn() == TRUE)
+    {
+        LockPlayerFieldControls();
+        ScriptContext_SetupScript(EventScript_RegionMap);
+        DestroyTask(taskId);
+    }
 }
 
 void Task_OpenOptionsMenuStartMenu(u8 taskId)
